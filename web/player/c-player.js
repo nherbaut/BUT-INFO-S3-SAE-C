@@ -1,10 +1,19 @@
 <script>
 class CPlayer extends HTMLElement {
   connectedCallback() {
-    this.exercise = JSON.parse(this.dataset.exercise || "{}");
+    this.exercise = this.parseExercise();
     this.readonly = this.dataset.readonly === "true";
     this.initialCode = this.exercise.files?.[0]?.content || "";
     this.render();
+  }
+
+  parseExercise() {
+    if (this.dataset.exerciseB64) {
+      const bytes = Uint8Array.from(atob(this.dataset.exerciseB64), (char) => char.charCodeAt(0));
+      const json = new TextDecoder("utf-8").decode(bytes);
+      return JSON.parse(json);
+    }
+    return JSON.parse(this.dataset.exercise || "{}");
   }
 
   render() {

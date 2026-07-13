@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+import base64
 from pathlib import Path
 
 
@@ -81,9 +82,9 @@ def all_exercises():
 def render_html_player(kind, path_text):
     exercise = load_exercise(path_text)
     readonly = "true" if kind == "c_demo" else "false"
-    payload = html.escape(json.dumps(exercise, ensure_ascii=False), quote=True)
+    payload = base64.b64encode(json.dumps(exercise, ensure_ascii=False).encode("utf-8")).decode("ascii")
     first_file = exercise["files"][0]
-    code = html.escape(first_file["content"])
+    code = html.escape(first_file["content"]).replace("\\", "&#92;")
     title = html.escape(exercise["title"])
     statement = html.escape(exercise.get("statement", ""))
     local_path = html.escape(exercise["path"])
@@ -96,7 +97,7 @@ def render_html_player(kind, path_text):
 <p class="card-text">{statement}</p>
 <p class="exercise-local card-text text-body-secondary">Version locale : <code>cd {local_path}</code>, puis <code>{command}</code>.</p>
 <pre><code class="language-c">{code}</code></pre>
-<c-player data-readonly="{readonly}" data-exercise="{payload}"></c-player>
+<c-player data-readonly="{readonly}" data-exercise-b64="{payload}"></c-player>
 </div>
 </details>
 """
