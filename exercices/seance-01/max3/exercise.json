@@ -1,0 +1,15 @@
+{
+  "id": "seance-01-max3",
+  "title": "Maximum de deux entiers",
+  "statement": "Lire deux entiers sur stdin puis afficher le plus grand.",
+  "sources": ["main.c"],
+  "main": "main.c",
+  "stdin": "3 9\n",
+  "expected_stdout": "max = 9\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

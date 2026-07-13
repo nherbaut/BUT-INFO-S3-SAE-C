@@ -1,0 +1,16 @@
+{
+  "id": "seance-04-tableau-dynamique",
+  "title": "Tableau dynamique",
+  "statement": "Allouer un tableau, l'agrandir avec realloc, calculer une somme puis liberer la memoire.",
+  "sources": ["main.c"],
+  "main": "main.c",
+  "stdin": "",
+  "expected_stdout": "taille=5 somme=15\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}
+

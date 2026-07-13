@@ -1,0 +1,15 @@
+{
+  "id": "seance-01-moyenne",
+  "title": "Calcul de moyenne",
+  "statement": "Lire deux notes entieres sur stdin puis afficher leur moyenne entiere.",
+  "sources": ["main.c"],
+  "main": "main.c",
+  "stdin": "12 14\n",
+  "expected_stdout": "moyenne = 13\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

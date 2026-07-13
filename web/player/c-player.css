@@ -1,0 +1,180 @@
+.embedded-exercise {
+  margin: 1.5rem 0;
+}
+
+.exercise-local {
+  color: #57606a;
+  font-size: 0.95rem;
+}
+
+c-player {
+  display: block;
+  margin-top: 1rem;
+}
+
+.c-player {
+  border: 1px solid #8c959f;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.c-player__bar {
+  align-items: center;
+  background: #24292f;
+  color: #ffffff;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+}
+
+.c-player__title {
+  font-weight: 700;
+}
+
+.c-player__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.c-player button {
+  border: 1px solid #8c959f;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.35rem 0.6rem;
+}
+
+.c-player__run {
+  background: #2da44e;
+  border-color: #2a9145;
+  color: #ffffff;
+}
+
+.c-player__reset {
+  background: #ffffff;
+  color: #24292f;
+}
+
+.c-player__body {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.c-player__editor,
+.c-player__output {
+  min-width: 0;
+  padding: 0.8rem;
+}
+
+.c-player__editor {
+  border-right: 1px solid #d0d7de;
+}
+
+.c-player label {
+  display: block;
+}
+
+.c-player textarea {
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.c-player__code {
+  height: 18rem;
+  min-height: 18rem;
+}
+
+.c-player__stdin {
+  display: block;
+  min-height: 4rem;
+  width: 100%;
+}
+
+.c-player__field-title {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.c-player__help {
+  align-items: center;
+  border: 1px solid #8c959f;
+  border-radius: 999px;
+  color: #57606a;
+  cursor: help;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 1.15rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.15rem;
+}
+
+.c-player__panel {
+  margin-bottom: 0.8rem;
+}
+
+.c-player__panel--unified {
+  margin-bottom: 0;
+}
+
+.c-player__panel strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.c-player pre {
+  background: #0d1117;
+  border-radius: 6px;
+  color: #e6edf3;
+  margin: 0;
+  min-height: 2.4rem;
+  overflow: auto;
+  padding: 0.6rem;
+  white-space: pre-wrap;
+}
+
+.c-player__combined-output {
+  box-sizing: border-box;
+  height: 18rem;
+  min-height: 18rem;
+}
+
+.c-player__line {
+  display: block;
+}
+
+.c-player__line--stdout {
+  color: rgb(194, 194, 21);
+}
+
+.c-player__line--stderr {
+  color: rgb(153, 36, 23);
+}
+
+.c-player__note {
+  background: #fff8c5;
+  border-bottom: 1px solid #d0d7de;
+  color: #57606a;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .c-player__body {
+    grid-template-columns: 1fr;
+  }
+
+  .c-player__editor {
+    border-bottom: 1px solid #d0d7de;
+    border-right: 0;
+  }
+}
