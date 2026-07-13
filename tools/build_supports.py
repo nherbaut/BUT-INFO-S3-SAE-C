@@ -299,22 +299,101 @@ def landing_page():
 </head>
 <body class="landing-page">
 {main_nav("home")}
-<main class="landing-hero">
-  <section class="container py-5">
-    <div class="row align-items-center min-vh-75">
-      <div class="col-lg-9">
-        <p class="text-uppercase text-body-secondary fw-semibold">Programmation C</p>
-        <h1 class="display-3 fw-bold">BUT INFO S3 SAE-C</h1>
-        <p class="lead mt-3">Supports HTML interactifs, exercices executables dans le navigateur et PDF de cours.</p>
-        <div class="d-flex flex-wrap gap-3 mt-4">
-          <a class="btn btn-primary btn-lg" href="{PUBLIC_REPO}">Cloner le depot</a>
-          <a class="btn btn-primary btn-lg" href="{COURSE_INDEX}">Documentation en ligne</a>
-          <a class="btn btn-secondary btn-lg" href="{FULL_PDF}" download>Telecharger le PDF</a>
-        </div>
+<main>
+  <section class="landing-hero">
+    <canvas class="landing-hero__canvas" id="landing-hero-canvas" aria-hidden="true"></canvas>
+    <div class="container landing-hero__content">
+      <p class="landing-hero__eyebrow">Programmation C pour la programmation systeme</p>
+      <h1 class="landing-hero__title">BUT INFO S3 SAE-C</h1>
+      <p class="landing-hero__lead">Supports de cours, exercices interactifs et PDF pour demarrer le C avant la programmation systeme.</p>
+      <div class="d-flex flex-wrap gap-3 mt-4">
+        <a class="btn btn-primary btn-lg" href="{COURSE_INDEX}">Ouvrir le site statique</a>
+        <a class="btn btn-primary btn-lg" href="{PUBLIC_REPO}">Cloner le depot</a>
+        <a class="btn btn-secondary btn-lg" href="{FULL_PDF}" download>Telecharger le PDF</a>
       </div>
     </div>
   </section>
+  <section class="container landing-next py-4">
+    <div class="row g-3">
+      <div class="col-md-4"><a class="landing-next__item" href="{COURSE_INDEX}">Documentation en ligne</a></div>
+      <div class="col-md-4"><a class="landing-next__item" href="exercices.html">Tous les exercices</a></div>
+      <div class="col-md-4"><a class="landing-next__item" href="{FULL_PDF}">PDF complet</a></div>
+    </div>
+  </section>
 </main>
+<script>
+(() => {{
+  const canvas = document.getElementById("landing-hero-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const snippets = [
+    "int main(void) {{",
+    "  printf(\\"SAE-C\\\\n\\");",
+    "  return 0;",
+    "}}",
+    "gcc -Wall -Wextra main.c",
+    "make test",
+    "valgrind ./programme",
+    "struct Etudiant {{ int note; }};",
+    "int *p = &value;",
+  ];
+  let width = 0;
+  let height = 0;
+  const particles = Array.from({{ length: 56 }}, (_, index) => ({{
+    x: Math.random(),
+    y: Math.random(),
+    speed: 0.12 + Math.random() * 0.28,
+    text: snippets[index % snippets.length],
+    color: ["#f2c94c", "#56c2a8", "#e06c5f", "#f8f9fa"][index % 4],
+  }}));
+
+  function resize() {{
+    const ratio = window.devicePixelRatio || 1;
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }}
+
+  function draw() {{
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#10100f";
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = "#f8f9fa";
+    for (let x = 0; x < width; x += 72) {{
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }}
+    for (let y = 0; y < height; y += 72) {{
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }}
+    ctx.globalAlpha = 0.82;
+    ctx.font = "14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    particles.forEach((particle, index) => {{
+      particle.x -= particle.speed / Math.max(width, 1);
+      if (particle.x < -0.35) {{
+        particle.x = 1.05;
+        particle.y = Math.random();
+      }}
+      ctx.fillStyle = particle.color;
+      ctx.fillText(particle.text, particle.x * width, particle.y * height + (index % 5) * 6);
+    }});
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }}
+
+  resize();
+  window.addEventListener("resize", resize);
+  draw();
+}})();
+</script>
 </body>
 </html>
 """
