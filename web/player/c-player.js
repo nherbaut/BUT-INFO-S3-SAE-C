@@ -76,8 +76,9 @@ class CPlayer extends HTMLElement {
         this.show(result);
         this.setStatus("Execution terminee.");
       } catch (error) {
+        const newline = String.fromCharCode(10);
         this.show({
-          compilerStderr: `Erreur runtime: ${error.message || error}\n`,
+          compilerStderr: `Erreur runtime: ${error.message || error}${newline}`,
         });
         this.setStatus("Erreur runtime.");
       }
@@ -85,11 +86,12 @@ class CPlayer extends HTMLElement {
     }
 
     const unchanged = source.trim() === this.initialCode.trim();
+    const newline = String.fromCharCode(10);
     this.show({
-      compilerStdout: unchanged ? "Compilation de reference du support.\n" : "",
+      compilerStdout: unchanged ? `Compilation de reference du support.${newline}` : "",
       compilerStderr: unchanged
-        ? "Runtime navigateur non installe : sortie de reference affichee sans compilation reelle.\n"
-        : "Runtime navigateur non installe : impossible de compiler les modifications dans le navigateur.\nUtiliser les commandes locales indiquees sous l'exercice.\n",
+        ? `Runtime navigateur non installe : sortie de reference affichee sans compilation reelle.${newline}`
+        : `Runtime navigateur non installe : impossible de compiler les modifications dans le navigateur.${newline}Utiliser les commandes locales indiquees sous l'exercice.${newline}`,
       programStdout: unchanged ? (this.exercise.expected_stdout || "") : "",
       programStderr: unchanged ? (this.exercise.expected_stderr || "") : "",
     });
@@ -117,10 +119,15 @@ class CPlayer extends HTMLElement {
     if (!value) {
       return [];
     }
-    const lines = String(value).replace(/\r/g, "").replace(/\n$/, "").split("\n");
+    const newline = String.fromCharCode(10);
+    const carriageReturn = String.fromCharCode(13);
+    const lines = String(value)
+      .split(carriageReturn).join("")
+      .replace(new RegExp(`${newline}$`), "")
+      .split(newline);
     return lines.map((line) => {
       const prefix = `[${origin}] `;
-      return `<span class="c-player__line c-player__line--${kind}">${this.escape(prefix + line)}</span>\n`;
+      return `<span class="c-player__line c-player__line--${kind}">${this.escape(prefix + line)}</span>${newline}`;
     });
   }
 
