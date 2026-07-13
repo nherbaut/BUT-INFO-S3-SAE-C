@@ -2,6 +2,45 @@
   margin: 1.5rem 0;
 }
 
+.landing-hero {
+  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.min-vh-75 {
+  min-height: 75vh;
+}
+
+.course-sidebar-left,
+.course-sidebar-right {
+  border-color: #dee2e6;
+}
+
+.course-sidebar-left {
+  border-right: 1px solid #dee2e6;
+}
+
+.course-sidebar-right {
+  border-left: 1px solid #dee2e6;
+}
+
+.course-sidebar-left .position-sticky,
+.course-sidebar-right .position-sticky {
+  top: 4rem;
+}
+
+.course-content {
+  max-width: 980px;
+}
+
+.embedded-exercise > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.embedded-exercise > summary::marker {
+  color: #6c757d;
+}
+
 .exercise-local {
   color: #57606a;
   font-size: 0.95rem;
@@ -176,5 +215,16 @@ c-player {
   .c-player__editor {
     border-bottom: 1px solid #d0d7de;
     border-right: 0;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .course-sidebar-left,
+  .course-sidebar-right {
+    border: 0;
+  }
+
+  .course-sidebar-right {
+    display: none;
   }
 }

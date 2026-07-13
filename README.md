@@ -47,8 +47,15 @@ make supports
 
 Les fichiers HTML et PDF generes sont places dans `build/supports/`.
 Les pages HTML generes par Pandoc utilisent Bootstrap, vendorise dans
-`web/vendor/bootstrap/`, et le contenu est enveloppe dans un `container`
-Bootstrap via les fragments `web/layout/`.
+`web/vendor/bootstrap/`.
+
+La generation produit notamment :
+
+- `index.html` : landing page du cours ;
+- `index-cours.html` : accueil de la documentation en ligne ;
+- `exercices.html` : page regroupant tous les exercices ;
+- `assets/pdf/but-info-s3-sae-c.pdf` : PDF complet ;
+- `assets/pdf/seance-*.pdf` : PDF par seance.
 
 Les pages HTML integrent les exercices avec un composant `c-player` :
 
@@ -88,3 +95,11 @@ Pour inclure un exercice dans une seance :
 
 Chaque dossier d'exercice doit contenir un `exercise.json` qui decrit les
 sources, l'entree standard, la sortie attendue et les commandes locales.
+
+## Publication GitHub Pages
+
+Le workflow `.github/workflows/pages.yml` construit les supports avec Pandoc,
+execute `make test`, puis publie `build/supports` avec GitHub Pages.
+
+Dans les settings du depot GitHub, configurer GitHub Pages avec la source
+`GitHub Actions`.

@@ -1,0 +1,13 @@
+build/
+.emscripten-cache/
+*.o
+
+exercices/seance-01/moyenne/moyenne
+exercices/seance-01/max3/max3
+exercices/seance-02/compilation-separee/stats
+exercices/seance-03/swap/swap
+exercices/seance-04/tableau-dynamique/tableau
+exercices/seance-05/etudiants/etudiants
+
+projet/starter/carnet
+projet/starter/test_carnet
