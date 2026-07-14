@@ -19,8 +19,10 @@ VENDOR_SRC = ROOT / "web" / "vendor"
 VENDOR_DST = BUILD / "vendor"
 PDF_DST = BUILD / "assets" / "pdf"
 ZIP_DST = BUILD / "assets" / "zip"
+PDF_FOOTER_TEX = BUILD / "pdf-footer.tex"
 TSCC_RUNTIME = PLAYER_DST / "tscc" / "tscc-runtime.js"
 PUBLIC_REPO = "https://github.com/nherbaut/BUT-INFO-S3-SAE-C"
+CREDITS = "Crédits : Nicolas Herbaut, Romain Giot et Pierre Ramet"
 COURSE_INDEX = "index-cours.html"
 FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
 FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
@@ -49,6 +51,38 @@ def write_text(path, content):
 
 def strip_tags(value):
     return html.unescape(TAG_RE.sub("", value)).strip()
+
+
+def site_footer():
+    return f"""
+<footer class="site-footer border-top">
+  <div class="container-fluid py-3">
+    <span>{html.escape(CREDITS)}</span>
+  </div>
+</footer>
+"""
+
+
+def write_pdf_footer():
+    write_text(
+        PDF_FOOTER_TEX,
+        r"""
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\footnotesize Cr\'edits : Nicolas Herbaut, Romain Giot et Pierre Ramet}
+\fancyfoot[R]{\footnotesize \thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.2pt}
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\footnotesize Cr\'edits : Nicolas Herbaut, Romain Giot et Pierre Ramet}
+  \fancyfoot[R]{\footnotesize \thepage}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0.2pt}
+}
+""".lstrip(),
+    )
 
 
 def course_infos():
@@ -368,7 +402,11 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
         )
         subprocess.run(command, check=True, cwd=BUILD)
     else:
-        subprocess.run(["pandoc", str(tmp), "-o", str(output_path)], check=True)
+        command = ["pandoc", str(tmp)]
+        if PDF_FOOTER_TEX.exists():
+            command.extend(["--include-in-header", str(PDF_FOOTER_TEX)])
+        command.extend(["-o", str(output_path)])
+        subprocess.run(command, check=True)
     tmp.unlink()
 
 
@@ -479,6 +517,7 @@ def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
     {right_sidebar(headings)}
   </div>
 </div>
+{site_footer()}
 """
 
 
@@ -525,6 +564,7 @@ def landing_page():
     </div>
   </section>
 </main>
+{site_footer()}
 <script>
 (() => {{
   const canvas = document.getElementById("landing-hero-canvas");
@@ -669,6 +709,7 @@ def main():
     BUILD.mkdir(parents=True, exist_ok=True)
     PDF_DST.mkdir(parents=True, exist_ok=True)
     ZIP_DST.mkdir(parents=True, exist_ok=True)
+    write_pdf_footer()
     if PLAYER_DST.exists():
         shutil.rmtree(PLAYER_DST)
     shutil.copytree(PLAYER_SRC, PLAYER_DST)
