@@ -539,6 +539,13 @@ quiz-player {
   font-weight: 500;
 }
 
+.ntfy-chat__username {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: 0.35rem;
+}
+
 .ntfy-chat__unread {
   background: #dc3545;
   border-radius: 999px;

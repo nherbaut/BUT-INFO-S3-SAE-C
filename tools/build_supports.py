@@ -815,6 +815,15 @@ def live_quiz_page():
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
 (() => {{
+  const groupKey = "sae-c.ntfy.group";
+  const liveCodeKey = "sae-c.live.code";
+  const liveQuizKey = "sae-c.live.quiz";
+  const groups = {{
+    S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C/sse",
+    S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C/sse",
+    S3C: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3C-SAE-C/sse",
+  }};
+  let source = null;
   const target = document.querySelector("[data-live-quiz-target]");
   const title = document.querySelector("[data-live-quiz-title]");
   const usernameBadge = document.querySelector("[data-live-username]");
@@ -829,6 +838,104 @@ def live_quiz_page():
     }} catch (_error) {{
       return null;
     }}
+  }}
+
+  function storedGroup() {{
+    try {{
+      const value = localStorage.getItem(groupKey);
+      return groups[value] ? value : "";
+    }} catch (_error) {{
+      return "";
+    }}
+  }}
+
+  function siteBasePath() {{
+    const brand = document.querySelector(".navbar-brand");
+    const baseUrl = brand ? new URL(brand.getAttribute("href") || ".", window.location.href) : new URL(".", window.location.href);
+    return baseUrl.pathname.replace(/[^/]*$/, "");
+  }}
+
+  function siteHref(path) {{
+    return new URL(path, new URL(siteBasePath(), window.location.href)).href;
+  }}
+
+  function localSiteUrl(message) {{
+    const trimmed = String(message || "").trim();
+    if (!/^https?:\\/\\/\\S+$/.test(trimmed)) return null;
+    try {{
+      const url = new URL(trimmed);
+      if (url.origin !== window.location.origin) return null;
+      if (!url.pathname.startsWith(siteBasePath())) return null;
+      return url;
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+
+  function storeJson(key, value) {{
+    try {{
+      localStorage.setItem(key, JSON.stringify(value));
+    }} catch (_error) {{
+      sessionStorage.setItem(key, JSON.stringify(value));
+    }}
+  }}
+
+  function parseAction(message) {{
+    try {{
+      const value = JSON.parse(message);
+      return value && value.saec === 1 && typeof value.type === "string" ? value : null;
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+
+  function handleLiveMessage(rawMessage) {{
+    const normalized = String(rawMessage || "").replaceAll("\\r", "");
+    const action = parseAction(normalized);
+    if (action?.type === "navigate" && action.url) {{
+      const targetUrl = localSiteUrl(action.url);
+      if (targetUrl) window.location.assign(targetUrl.href);
+      return;
+    }}
+    if (action?.type === "code") {{
+      storeJson(liveCodeKey, {{
+        title: action.title || "Code live",
+        source: action.source || "",
+        receivedAt: new Date().toISOString(),
+      }});
+      window.location.assign(siteHref("live-code.html"));
+      return;
+    }}
+    if (action?.type === "live_quiz" && action.question && action.responseTopic) {{
+      storeJson(liveQuizKey, {{
+        id: action.id || `live-quiz-${{Date.now()}}`,
+        title: action.title || "Question live",
+        question: action.question,
+        responseTopic: action.responseTopic,
+        username: usernameBadge.textContent || "anonyme",
+        receivedAt: new Date().toISOString(),
+      }});
+      window.location.assign(siteHref("live-quiz.html"));
+      return;
+    }}
+    const targetUrl = localSiteUrl(normalized);
+    if (targetUrl) {{
+      window.location.assign(targetUrl.href);
+    }}
+  }}
+
+  function connectGroupTopic() {{
+    const group = storedGroup();
+    if (!group || !window.EventSource) return;
+    source = new EventSource(groups[group]);
+    source.onmessage = (event) => {{
+      try {{
+        const payload = JSON.parse(event.data);
+        if (payload.event === "message") handleLiveMessage(payload.message);
+      }} catch (_error) {{
+        handleLiveMessage(event.data);
+      }}
+    }};
   }}
 
   function render(payload) {{
@@ -882,9 +989,11 @@ def live_quiz_page():
   const payload = readPayload();
   if (!payload || !payload.question || !payload.responseTopic) {{
     target.innerHTML = '<div class="card-body"><div class="alert alert-warning mb-0">Aucune question live recue pour le moment.</div></div>';
+    connectGroupTopic();
     return;
   }}
   render(payload);
+  connectGroupTopic();
 }})();
 </script>
 </body>

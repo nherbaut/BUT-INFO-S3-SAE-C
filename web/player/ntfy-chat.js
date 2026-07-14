@@ -133,12 +133,13 @@
   }
 
   function createWidget() {
+    const username = storedUsername();
     const root = document.createElement("section");
     root.className = "ntfy-chat ntfy-chat--collapsed";
     root.innerHTML = `
       <div class="ntfy-chat__header">
         <button class="ntfy-chat__toggle" type="button" aria-expanded="false">
-          <span>Chat SAE-C</span>
+          <span>Chat SAE-C <span class="ntfy-chat__username">${escape(username)}</span></span>
           <span class="ntfy-chat__unread" data-unread hidden></span>
           <span class="ntfy-chat__status" data-status>Configuration...</span>
         </button>
@@ -356,7 +357,6 @@
   }
 
   const root = createWidget();
-  storedUsername();
   const group = storedGroup();
   if (group) {
     connect(root, group);
