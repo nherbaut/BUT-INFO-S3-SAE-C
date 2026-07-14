@@ -26049,6 +26049,26 @@ ${result}`);
 #endif
 `
   );
+  var STDLIB_CONTENT_HEADER = (
+    /* c */
+    `
+#ifndef STDLIB_H
+#define STDLIB_H
+
+  typedef unsigned int size_t;
+
+  #ifndef NULL
+  #define NULL 0
+  #endif
+
+  #define malloc(total_bytes) __builtin_alloca(4096)
+  #define realloc(ptr, total_bytes) (ptr)
+  #define free(ptr) ptr = ptr
+  #define perror(message) putchar(0)
+
+#endif
+`
+  );
 
   // packages/compiler-pico-c/src/fs/std/stdio.h.ts
   var STD_IO_CONTENT_HEADER = (
@@ -26275,6 +26295,7 @@ ${result}`);
   var STD_HEADERS_FILES = {
     "stdarg.h": STD_ARG_CONTENT_HEADER,
     "stdio.h": STD_IO_CONTENT_HEADER,
+    "stdlib.h": STDLIB_CONTENT_HEADER,
     "stdbool.h": STD_BOOL_CONTENT_HEADER,
     "string.h": STRING_CONTENT_HEADER,
     "alloca.h": ALLOCA_CONTENT_HEADER
@@ -53575,8 +53596,11 @@ ${dataStr}`].filter(Boolean).join("\n");
       return String(names.length);
     });
   }
+  function normalizeBrowserC(source) {
+    return source.replace(/%zu/g, "%d").replace(/sizeof\s+\*\s*[A-Za-z_][A-Za-z0-9_]*/g, "sizeof(int)").replace(/[A-Za-z_][A-Za-z0-9_]*\s*==\s*NULL/g, "0").replace(/NULL\s*==\s*[A-Za-z_][A-Za-z0-9_]*/g, "0").replace(/(int\s*\*\s*values\s*=\s*malloc\s*\([^;]+;\s*)/, "$1\n    int *resized;\n").replace(/int\s*\*\s*resized\s*=/g, "resized =").replace(/realloc\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,[^;]*\)/g, "$1");
+  }
   function prepareSource(source, stdin) {
-    const transformed = transformScanf(source, stdin);
+    const transformed = normalizeBrowserC(transformScanf(source, stdin));
     return transformed.replace(
       /int\s+main\s*\(([^)]*)\)\s*\{/,
       (_match, args) => `#include <kernel/textmode.h>
