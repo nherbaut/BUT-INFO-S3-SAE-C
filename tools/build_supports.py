@@ -1131,6 +1131,7 @@ def admin_page(flow_items, question_bank):
           <button class="btn btn-outline-secondary" type="button" data-flow-prev>Precedent</button>
           <button class="btn btn-primary" type="button" data-flow-current>Envoyer l'element courant</button>
           <button class="btn btn-outline-secondary" type="button" data-flow-next>Suivant</button>
+          <button class="btn btn-outline-secondary" type="button" data-preview-fullscreen>Plein ecran</button>
         </div>
       </div>
     </div>
@@ -1249,6 +1250,7 @@ def admin_page(flow_items, question_bank):
   const resultsBody = document.querySelector("[data-results-body]");
   const resultsActions = document.querySelector("[data-results-actions]");
   const preview = document.querySelector("[data-admin-preview]");
+  const previewContainer = document.querySelector(".admin-mirror__preview");
   const previewFrame = document.querySelector("[data-admin-preview-frame]");
   const previewTitle = document.querySelector("[data-preview-title]");
   const previewSubtitle = document.querySelector("[data-preview-subtitle]");
@@ -1339,6 +1341,29 @@ def admin_page(flow_items, question_bank):
       return;
     }}
     previewFrame.src = section.href;
+  }}
+
+  function updateFullscreenButton() {{
+    const button = document.querySelector("[data-preview-fullscreen]");
+    const active = document.fullscreenElement === previewContainer;
+    button.textContent = active ? "Quitter plein ecran" : "Plein ecran";
+  }}
+
+  async function togglePreviewFullscreen() {{
+    if (!previewContainer.requestFullscreen) {{
+      setStatus("warning", "Le mode plein ecran n'est pas disponible dans ce navigateur.");
+      return;
+    }}
+    try {{
+      if (document.fullscreenElement === previewContainer) {{
+        await document.exitFullscreen();
+      }} else {{
+        await previewContainer.requestFullscreen();
+      }}
+      updateFullscreenButton();
+    }} catch (error) {{
+      setStatus("danger", `Impossible de changer le mode plein ecran : ${{error.message}}`);
+    }}
   }}
 
   async function publish(message) {{
@@ -1679,6 +1704,8 @@ def admin_page(flow_items, question_bank):
   document.querySelector("[data-flow-prev]").addEventListener("click", sendPreviousFlowItem);
   document.querySelector("[data-flow-current]").addEventListener("click", sendCurrentFlowItem);
   document.querySelector("[data-flow-next]").addEventListener("click", sendNextFlowItem);
+  document.querySelector("[data-preview-fullscreen]").addEventListener("click", togglePreviewFullscreen);
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
 
   document.querySelectorAll("[data-flow-index]").forEach((button) => {{
     button.addEventListener("click", () => {{

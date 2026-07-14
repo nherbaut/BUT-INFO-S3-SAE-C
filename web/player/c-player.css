@@ -722,6 +722,21 @@ quiz-player {
   width: 100%;
 }
 
+.admin-mirror__preview:fullscreen {
+  background: var(--bs-body-bg);
+  border: 0;
+  border-radius: 0;
+  height: 100vh;
+}
+
+.admin-mirror__preview:fullscreen .admin-preview {
+  min-height: calc(100vh - 4.5rem);
+}
+
+.admin-mirror__preview:fullscreen .admin-preview__frame {
+  height: calc(100vh - 4.5rem);
+}
+
 .admin-chat__messages {
   display: flex;
   flex-direction: column;
