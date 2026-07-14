@@ -1,6 +1,9 @@
 <script>
 (() => {
   const storageKey = "sae-c.ntfy.group";
+  const usernameKey = "sae-c.ntfy.username";
+  const liveCodeKey = "sae-c.live.code";
+  const liveQuizKey = "sae-c.live.quiz";
   const groups = {
     S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C/sse",
     S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C/sse",
@@ -56,6 +59,26 @@
     }
   }
 
+  function storedUsername() {
+    try {
+      let value = window.localStorage.getItem(usernameKey);
+      if (!value) {
+        value = randomUsername();
+        window.localStorage.setItem(usernameKey, value);
+      }
+      return value;
+    } catch (_error) {
+      return randomUsername();
+    }
+  }
+
+  function randomUsername() {
+    const left = ["brave", "calm", "clever", "eager", "focused", "gentle", "happy", "sharp", "steady", "swift"];
+    const right = ["ada", "babbage", "cerf", "dijkstra", "hopper", "kernighan", "lamport", "lovelace", "ritchie", "turing"];
+    const suffix = Math.floor(Math.random() * 900 + 100);
+    return `${left[Math.floor(Math.random() * left.length)]}_${right[Math.floor(Math.random() * right.length)]}_${suffix}`;
+  }
+
   function siteBasePath() {
     const brand = document.querySelector(".navbar-brand");
     const baseUrl = brand ? new URL(brand.getAttribute("href") || ".", window.location.href) : new URL(".", window.location.href);
@@ -78,6 +101,18 @@
       return url;
     } catch (_error) {
       return null;
+    }
+  }
+
+  function siteHref(path) {
+    return new URL(path, new URL(siteBasePath(), window.location.href)).href;
+  }
+
+  function storeJson(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (_error) {
+      window.sessionStorage.setItem(key, JSON.stringify(value));
     }
   }
 
@@ -104,6 +139,7 @@
       <div class="ntfy-chat__header">
         <button class="ntfy-chat__toggle" type="button" aria-expanded="false">
           <span>Chat SAE-C</span>
+          <span class="ntfy-chat__unread" data-unread hidden></span>
           <span class="ntfy-chat__status" data-status>Configuration...</span>
         </button>
         <button class="ntfy-chat__settings" type="button" aria-label="Configurer le groupe ntfy" title="Configurer le groupe">Groupe</button>
@@ -132,6 +168,9 @@
     root.querySelector(".ntfy-chat__toggle").addEventListener("click", () => {
       const collapsed = root.classList.toggle("ntfy-chat--collapsed");
       root.querySelector(".ntfy-chat__toggle").setAttribute("aria-expanded", collapsed ? "false" : "true");
+      if (!collapsed) {
+        markRead(root);
+      }
     });
     root.querySelector(".ntfy-chat__settings").addEventListener("click", () => openConfig(root));
     root.querySelector("[data-close-config]").addEventListener("click", () => {
@@ -169,6 +208,7 @@
   }
 
   function appendEntry(root, entry) {
+    openWidget(root);
     const messages = root.querySelector("[data-messages]");
     messages.append(entry);
     while (messages.children.length > 50) {
@@ -177,8 +217,77 @@
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function markUnread(root) {
+    root.querySelector("[data-unread]").hidden = false;
+  }
+
+  function markRead(root) {
+    root.querySelector("[data-unread]").hidden = true;
+  }
+
+  function openWidget(root) {
+    root.classList.remove("ntfy-chat--collapsed");
+    root.querySelector(".ntfy-chat__toggle").setAttribute("aria-expanded", "true");
+  }
+
+  function parseAction(message) {
+    try {
+      const value = JSON.parse(message);
+      return value && value.saec === 1 && typeof value.type === "string" ? value : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function openLiveCode(source, title) {
+    storeJson(liveCodeKey, {
+      title: title || "Message C",
+      source,
+      receivedAt: new Date().toISOString(),
+    });
+    window.location.assign(siteHref("live-code.html"));
+  }
+
+  function openLiveQuiz(action) {
+    storeJson(liveQuizKey, {
+      id: action.id || `live-quiz-${Date.now()}`,
+      title: action.title || "Question live",
+      question: action.question,
+      responseTopic: action.responseTopic,
+      username: storedUsername(),
+      receivedAt: new Date().toISOString(),
+    });
+    window.location.assign(siteHref("live-quiz.html"));
+  }
+
+  function handleAction(root, action) {
+    if (action.type === "navigate" && action.url) {
+      const target = localSiteUrl(action.url);
+      if (target) {
+        window.location.assign(target.href);
+      }
+      return true;
+    }
+    if (action.type === "code") {
+      openLiveCode(action.source || "", action.title);
+      return true;
+    }
+    if (action.type === "live_quiz" && action.question && action.responseTopic) {
+      openLiveQuiz(action);
+      return true;
+    }
+    appendText(root, action.message || JSON.stringify(action));
+    return true;
+  }
+
   function handleMessage(root, rawMessage) {
     const normalized = String(rawMessage || "").replaceAll("\r", "");
+    const action = parseAction(normalized);
+    if (action) {
+      markUnread(root);
+      handleAction(root, action);
+      return;
+    }
     const target = localSiteUrl(normalized);
     if (target) {
       window.location.assign(target.href);
@@ -186,9 +295,11 @@
     }
     const lines = normalized.split("\n");
     if (lines[0] === "c") {
-      appendCode(root, lines.slice(1).join("\n"));
+      markUnread(root);
+      openLiveCode(lines.slice(1).join("\n"), "Message C");
       return;
     }
+    markUnread(root);
     appendText(root, normalized);
   }
 
@@ -245,6 +356,7 @@
   }
 
   const root = createWidget();
+  storedUsername();
   const group = storedGroup();
   if (group) {
     connect(root, group);

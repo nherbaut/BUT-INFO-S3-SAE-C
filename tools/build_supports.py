@@ -29,6 +29,9 @@ FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 QUIZ_INDEX = "quiz.html"
 QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
 ADMIN_PAGE = "admin.html"
+LIVE_CODE_PAGE = "live-code.html"
+LIVE_QUIZ_PAGE = "live-quiz.html"
+ADMIN_DIGEST = "$argon2id$v=19$m=65536,t=3,p=4$SDaf4HTJfRAO2wys9QIE7A$bLo2gTmVGol0ogx6vLCsYGPNZbIcqUNWS88ZuJZCgIo"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
 CODE_FENCE_C = re.compile(r"^```\s*c\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
@@ -221,6 +224,22 @@ def all_quizzes(courses):
     for course in courses:
         quizzes.extend(quizzes_from_source(read_text(course["path"]), course))
     return quizzes
+
+
+def live_question_bank(courses):
+    questions = []
+    for quiz in all_quizzes(courses):
+        for question in quiz["questions"]:
+            questions.append(
+                {
+                    "id": f'{quiz["course_stem"]}:{quiz["id"]}:{question["id"]}',
+                    "label": f'{quiz["course_title"]} - {quiz["title"]} - {question["title"]}',
+                    "course_title": quiz["course_title"],
+                    "quiz_title": quiz["title"],
+                    "question": question,
+                }
+            )
+    return questions
 
 
 def render_html_player(kind, path_text):
@@ -689,7 +708,191 @@ def landing_page():
 """
 
 
-def admin_page(sections):
+def live_code_page():
+    return f"""<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code live SAE-C</title>
+  <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="player/c-player.css">
+  <script>
+    document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
+  </script>
+</head>
+<body class="live-page">
+{main_nav("course")}
+<main class="container-fluid py-3 live-page__main">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h3 mb-0" data-live-title>Code live</h1>
+      <p class="text-body-secondary mb-0">Code envoye par l'enseignant via ntfy.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{COURSE_INDEX}">Retour au cours</a>
+  </div>
+  <div data-live-code-target></div>
+</main>
+{site_footer()}
+{read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{read_text(PLAYER_SRC / "c-player.js")}
+{read_text(PLAYER_SRC / "site-theme.js")}
+<script>
+(() => {{
+  const target = document.querySelector("[data-live-code-target]");
+  const title = document.querySelector("[data-live-title]");
+  function encodeData(value) {{
+    const json = JSON.stringify(value);
+    const bytes = new TextEncoder().encode(json);
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }}
+  function readPayload() {{
+    try {{
+      return JSON.parse(localStorage.getItem("sae-c.live.code") || sessionStorage.getItem("sae-c.live.code") || "null");
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+  const payload = readPayload();
+  if (!payload || typeof payload.source !== "string") {{
+    target.innerHTML = '<div class="alert alert-warning">Aucun code live recu pour le moment.</div>';
+    return;
+  }}
+  title.textContent = payload.title || "Code live";
+  const exercise = {{
+    id: `live-code-${{Date.now()}}`,
+    title: payload.title || "Code live",
+    statement: "",
+    sources: ["main.c"],
+    main: "main.c",
+    stdin: "",
+    expected_stdout: "",
+    expected_stderr: "",
+    path: "",
+    files: [{{ name: "main.c", content: payload.source }}],
+    browser_runnable: true,
+  }};
+  const player = document.createElement("c-player");
+  player.dataset.readonly = "false";
+  player.dataset.exerciseB64 = encodeData(exercise);
+  player.classList.add("live-code-player");
+  target.append(player);
+}})();
+</script>
+</body>
+</html>
+"""
+
+
+def live_quiz_page():
+    return f"""<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiz live SAE-C</title>
+  <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="player/c-player.css">
+  <script>
+    document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
+  </script>
+</head>
+<body class="live-page">
+{main_nav("quiz")}
+<main class="container py-4 live-quiz-page">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <div>
+      <h1 class="h3 mb-0" data-live-quiz-title>Quiz live</h1>
+      <p class="text-body-secondary mb-0">Reponse envoyee directement a l'enseignant.</p>
+    </div>
+    <span class="badge text-bg-secondary" data-live-username></span>
+  </div>
+  <section class="card" data-live-quiz-target></section>
+</main>
+{site_footer()}
+{read_text(PLAYER_SRC / "site-theme.js")}
+<script>
+(() => {{
+  const target = document.querySelector("[data-live-quiz-target]");
+  const title = document.querySelector("[data-live-quiz-title]");
+  const usernameBadge = document.querySelector("[data-live-username]");
+
+  function escape(value) {{
+    return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  }}
+
+  function readPayload() {{
+    try {{
+      return JSON.parse(localStorage.getItem("sae-c.live.quiz") || sessionStorage.getItem("sae-c.live.quiz") || "null");
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+
+  function render(payload) {{
+    const question = payload.question;
+    title.textContent = payload.title || "Quiz live";
+    usernameBadge.textContent = payload.username || "anonyme";
+    target.innerHTML = `
+      <div class="card-header fw-semibold">${{escape(question.title || "Question")}}</div>
+      <div class="card-body">
+        ${{question.description ? `<p class="text-body-secondary">${{escape(question.description)}}</p>` : ""}}
+        <fieldset>
+          <legend class="visually-hidden">${{escape(question.title || "Question")}}</legend>
+          ${{(question.options || []).map((option) => `
+            <label class="form-check live-quiz-option">
+              <input class="form-check-input" type="checkbox" value="${{escape(option.id)}}">
+              <span class="form-check-label">${{escape(option.text)}}</span>
+            </label>
+          `).join("")}}
+        </fieldset>
+        <button class="btn btn-primary mt-3" type="button" data-submit-live-quiz>Envoyer la reponse</button>
+        <div class="mt-3" data-live-quiz-feedback></div>
+      </div>
+    `;
+    target.querySelector("[data-submit-live-quiz]").addEventListener("click", () => submit(payload));
+  }}
+
+  async function submit(payload) {{
+    const selected = Array.from(target.querySelectorAll("input:checked"), (input) => input.value);
+    const feedback = target.querySelector("[data-live-quiz-feedback]");
+    const response = {{
+      saec: 1,
+      type: "quiz_response",
+      quizId: payload.id,
+      username: payload.username || "anonyme",
+      selected,
+      answeredAt: new Date().toISOString(),
+    }};
+    try {{
+      const result = await fetch(payload.responseTopic, {{
+        method: "POST",
+        body: JSON.stringify(response),
+      }});
+      if (!result.ok) throw new Error(`HTTP ${{result.status}}`);
+      feedback.innerHTML = '<div class="alert alert-success mb-0">Reponse envoyee.</div>';
+      target.querySelector("[data-submit-live-quiz]").disabled = true;
+    }} catch (error) {{
+      feedback.innerHTML = `<div class="alert alert-danger mb-0">Echec de l'envoi : ${{escape(error.message)}}</div>`;
+    }}
+  }}
+
+  const payload = readPayload();
+  if (!payload || !payload.question || !payload.responseTopic) {{
+    target.innerHTML = '<div class="card-body"><div class="alert alert-warning mb-0">Aucune question live recue pour le moment.</div></div>';
+    return;
+  }}
+  render(payload);
+}})();
+</script>
+</body>
+</html>
+"""
+
+
+def admin_page(sections, question_bank):
     section_rows = []
     for section in sections:
         level_class = "admin-section__title--h2" if section["level"] == 2 else ""
@@ -704,6 +907,7 @@ def admin_page(sections):
 </article>
 """
         )
+    question_bank_b64 = encode_data(question_bank)
     return f"""<!doctype html>
 <html lang="fr">
 <head>
@@ -715,10 +919,22 @@ def admin_page(sections):
   <script>
     document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
 </head>
 <body>
 {main_nav("admin", include_admin=True)}
-<main class="container py-4 admin-page">
+<section class="container py-4 admin-auth" data-admin-auth>
+  <div class="card mx-auto" style="max-width: 32rem;">
+    <div class="card-header fw-semibold">Authentification admin</div>
+    <div class="card-body">
+      <label class="form-label" for="admin-password">Mot de passe</label>
+      <input class="form-control" id="admin-password" type="password" data-admin-password autocomplete="current-password">
+      <button class="btn btn-primary mt-3" type="button" data-admin-login>Entrer</button>
+      <div class="mt-3" data-admin-auth-feedback></div>
+    </div>
+  </div>
+</section>
+<main class="container py-4 admin-page" data-admin-app hidden>
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
     <div>
       <h1>Admin SAE-C</h1>
@@ -741,7 +957,37 @@ def admin_page(sections):
       <textarea class="form-control admin-message" id="admin-message" data-admin-message rows="12"></textarea>
       <div class="d-flex flex-wrap gap-2 mt-3">
         <button class="btn btn-primary" type="button" data-send-text>Envoyer comme texte</button>
-        <button class="btn btn-secondary" type="button" data-send-code>Envoyer comme code C</button>
+        <button class="btn btn-secondary" type="button" data-send-code>Envoyer comme code C plein ecran</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Quiz live</div>
+    <div class="card-body">
+      <label class="form-label" for="admin-question-bank">Question de la banque</label>
+      <select class="form-select" id="admin-question-bank" data-question-bank></select>
+      <label class="form-label mt-3" for="admin-question-json">Question JSON</label>
+      <textarea class="form-control admin-message" id="admin-question-json" data-question-json rows="10"></textarea>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <button class="btn btn-primary" type="button" data-send-bank-question>Envoyer la question selectionnee</button>
+        <button class="btn btn-secondary" type="button" data-send-json-question>Envoyer la question JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Statistiques live</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <h2 class="h5">Session courante</h2>
+          <div data-live-session-stats class="admin-stats-box text-body-secondary">Aucune question live envoyee.</div>
+        </div>
+        <div class="col-lg-6">
+          <h2 class="h5">Leaderboard</h2>
+          <div data-live-leaderboard class="admin-stats-box text-body-secondary">Aucune reponse recue.</div>
+        </div>
       </div>
     </div>
   </section>
@@ -759,14 +1005,30 @@ def admin_page(sections):
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
 (() => {{
+  const authDigest = "{ADMIN_DIGEST}";
+  const authKey = "sae-c.admin.auth.v1";
+  const statsKey = "sae-c.admin.liveStats.v1";
+  const questionBank = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob("{question_bank_b64}"), (char) => char.charCodeAt(0))));
   const topics = {{
     S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C",
     S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C",
     S3C: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3C-SAE-C",
   }};
+  const adminTopics = {{
+    S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C-admin",
+    S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C-admin",
+    S3C: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3C-SAE-C-admin",
+  }};
+  let responseSource = null;
+  let activeQuiz = readActiveQuiz();
   const groupSelect = document.querySelector("[data-admin-group]");
   const messageInput = document.querySelector("[data-admin-message]");
+  const questionSelect = document.querySelector("[data-question-bank]");
+  const questionJson = document.querySelector("[data-question-json]");
   const status = document.querySelector("[data-admin-status]");
+  const authPanel = document.querySelector("[data-admin-auth]");
+  const appPanel = document.querySelector("[data-admin-app]");
+  const authFeedback = document.querySelector("[data-admin-auth-feedback]");
 
   function setStatus(kind, message) {{
     status.hidden = false;
@@ -774,8 +1036,48 @@ def admin_page(sections):
     status.textContent = message;
   }}
 
+  function setAuthFeedback(kind, message) {{
+    authFeedback.innerHTML = `<div class="alert alert-${{kind}} mb-0">${{escape(message)}}</div>`;
+  }}
+
+  function escape(value) {{
+    return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  }}
+
+  function showApp() {{
+    authPanel.hidden = true;
+    appPanel.hidden = false;
+    populateQuestions();
+    connectResponses();
+    renderStats();
+  }}
+
+  async function login() {{
+    const password = document.querySelector("[data-admin-password]").value;
+    if (!window.argon2?.verify) {{
+      setAuthFeedback("danger", "Librairie Argon2 indisponible.");
+      return;
+    }}
+    try {{
+      await window.argon2.verify({{ pass: password, encoded: authDigest }});
+      sessionStorage.setItem(authKey, "true");
+      showApp();
+    }} catch (_error) {{
+      setAuthFeedback("danger", "Mot de passe incorrect.");
+    }}
+  }}
+
+  document.querySelector("[data-admin-login]").addEventListener("click", login);
+  document.querySelector("[data-admin-password]").addEventListener("keydown", (event) => {{
+    if (event.key === "Enter") login();
+  }});
+
   function currentTopic() {{
     return topics[groupSelect.value];
+  }}
+
+  function currentAdminTopic() {{
+    return adminTopics[groupSelect.value];
   }}
 
   async function publish(message) {{
@@ -798,6 +1100,181 @@ def admin_page(sections):
     }}
   }}
 
+  function action(type, payload) {{
+    return JSON.stringify({{ saec: 1, type, ...payload }});
+  }}
+
+  function selectedBankQuestion() {{
+    return questionBank.find((question) => question.id === questionSelect.value) || questionBank[0];
+  }}
+
+  function populateQuestions() {{
+    questionSelect.innerHTML = questionBank.map((question) => `<option value="${{escape(question.id)}}">${{escape(question.label)}}</option>`).join("");
+    updateQuestionJson();
+  }}
+
+  function updateQuestionJson() {{
+    const question = selectedBankQuestion();
+    questionJson.value = JSON.stringify(question.question, null, 2);
+  }}
+
+  function studentQuestion(question) {{
+    return {{
+      id: question.id,
+      title: question.title,
+      description: question.description || "",
+      options: question.options.map((option) => ({{ id: option.id, text: option.text }})),
+    }};
+  }}
+
+  function normalizeQuestion(question) {{
+    if (!question.id) question.id = `live-question-${{Date.now()}}`;
+    if (!Array.isArray(question.options) || question.options.length === 0) {{
+      throw new Error("La question doit contenir des options.");
+    }}
+    if (!question.options.some((option) => option.correct === true)) {{
+      throw new Error("La question doit contenir au moins une bonne reponse.");
+    }}
+    question.options = question.options.map((option, index) => ({{
+      id: option.id || `${{question.id}}-o${{index + 1}}`,
+      text: option.text || "",
+      correct: option.correct === true,
+    }}));
+    return question;
+  }}
+
+  function startLiveQuiz(question) {{
+    const fullQuestion = normalizeQuestion(JSON.parse(JSON.stringify(question)));
+    const quizId = `live-${{groupSelect.value}}-${{Date.now()}}`;
+    activeQuiz = {{
+      id: quizId,
+      group: groupSelect.value,
+      title: fullQuestion.title || "Question live",
+      question: fullQuestion,
+      startedAt: new Date().toISOString(),
+    }};
+    localStorage.setItem("sae-c.admin.activeQuiz.v1", JSON.stringify(activeQuiz));
+    ensureSession(activeQuiz);
+    publish(action("live_quiz", {{
+      id: quizId,
+      title: activeQuiz.title,
+      question: studentQuestion(fullQuestion),
+      responseTopic: currentAdminTopic(),
+    }}));
+    renderStats();
+  }}
+
+  function readStats() {{
+    try {{
+      return JSON.parse(localStorage.getItem(statsKey) || '{{"sessions":{{}},"leaderboard":{{}}}}');
+    }} catch (_error) {{
+      return {{ sessions: {{}}, leaderboard: {{}} }};
+    }}
+  }}
+
+  function writeStats(stats) {{
+    localStorage.setItem(statsKey, JSON.stringify(stats));
+  }}
+
+  function readActiveQuiz() {{
+    try {{
+      return JSON.parse(localStorage.getItem("sae-c.admin.activeQuiz.v1") || "null");
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+
+  function ensureSession(quiz) {{
+    const stats = readStats();
+    if (!stats.sessions[quiz.id]) {{
+      stats.sessions[quiz.id] = {{
+        id: quiz.id,
+        title: quiz.title,
+        group: quiz.group,
+        startedAt: quiz.startedAt,
+        answers: [],
+      }};
+      writeStats(stats);
+    }}
+  }}
+
+  function sameSet(left, right) {{
+    if (left.length !== right.length) return false;
+    const values = new Set(left);
+    return right.every((value) => values.has(value));
+  }}
+
+  function handleQuizResponse(response) {{
+    if (!response || response.type !== "quiz_response" || !activeQuiz || response.quizId !== activeQuiz.id) return;
+    const stats = readStats();
+    const session = stats.sessions[activeQuiz.id] || {{
+      id: activeQuiz.id,
+      title: activeQuiz.title,
+      group: activeQuiz.group,
+      startedAt: activeQuiz.startedAt,
+      answers: [],
+    }};
+    if (session.answers.some((answer) => answer.username === response.username)) {{
+      return;
+    }}
+    const expected = activeQuiz.question.options.filter((option) => option.correct).map((option) => option.id);
+    const selected = Array.isArray(response.selected) ? response.selected : [];
+    const correct = sameSet(selected, expected);
+    session.answers.push({{
+      username: response.username || "anonyme",
+      selected,
+      correct,
+      answeredAt: response.answeredAt || new Date().toISOString(),
+    }});
+    stats.sessions[activeQuiz.id] = session;
+    const user = session.answers.at(-1).username;
+    stats.leaderboard[user] = stats.leaderboard[user] || {{ username: user, score: 0, answers: 0 }};
+    stats.leaderboard[user].answers += 1;
+    if (correct) stats.leaderboard[user].score += 1;
+    writeStats(stats);
+    renderStats();
+  }}
+
+  function renderStats() {{
+    const stats = readStats();
+    const sessionBox = document.querySelector("[data-live-session-stats]");
+    const leaderboardBox = document.querySelector("[data-live-leaderboard]");
+    if (!activeQuiz || !stats.sessions[activeQuiz.id]) {{
+      sessionBox.textContent = "Aucune question live envoyee.";
+    }} else {{
+      const session = stats.sessions[activeQuiz.id];
+      const correctAnswers = session.answers.filter((answer) => answer.correct);
+      const podium = correctAnswers.slice(0, 3).map((answer, index) => `<li>${{index + 1}}. ${{escape(answer.username)}} <span class="text-body-secondary">${{escape(answer.answeredAt)}}</span></li>`).join("");
+      sessionBox.innerHTML = `
+        <p class="mb-2"><strong>${{escape(session.title)}}</strong></p>
+        <p class="mb-2">${{session.answers.length}} reponse(s), ${{correctAnswers.length}} correcte(s).</p>
+        <ol class="mb-0">${{podium || "<li>Aucune bonne reponse.</li>"}}</ol>
+      `;
+    }}
+    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username)).slice(0, 10);
+    leaderboardBox.innerHTML = leaders.length
+      ? `<ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol>`
+      : "Aucune reponse recue.";
+  }}
+
+  function connectResponses() {{
+    if (responseSource) responseSource.close();
+    if (!window.EventSource) {{
+      setStatus("warning", "SSE indisponible pour les reponses.");
+      return;
+    }}
+    responseSource = new EventSource(`${{currentAdminTopic()}}/sse`);
+    responseSource.onmessage = (event) => {{
+      try {{
+        const payload = JSON.parse(event.data);
+        const message = payload.message ? JSON.parse(payload.message) : payload;
+        handleQuizResponse(message);
+      }} catch (_error) {{
+        // Ignore non-quiz messages on the admin response topic.
+      }}
+    }};
+  }}
+
   document.querySelectorAll("[data-send-url]").forEach((button) => {{
     button.addEventListener("click", () => {{
       const url = new URL(button.dataset.sendUrl, window.location.href);
@@ -810,8 +1287,28 @@ def admin_page(sections):
   }});
 
   document.querySelector("[data-send-code]").addEventListener("click", () => {{
-    publish(`c\\n${{messageInput.value}}`);
+    publish(action("code", {{ title: "Code live", source: messageInput.value }}));
   }});
+
+  questionSelect.addEventListener("change", updateQuestionJson);
+
+  document.querySelector("[data-send-bank-question]").addEventListener("click", () => {{
+    startLiveQuiz(selectedBankQuestion().question);
+  }});
+
+  document.querySelector("[data-send-json-question]").addEventListener("click", () => {{
+    try {{
+      startLiveQuiz(JSON.parse(questionJson.value));
+    }} catch (error) {{
+      setStatus("danger", `Question JSON invalide : ${{error.message}}`);
+    }}
+  }});
+
+  groupSelect.addEventListener("change", connectResponses);
+
+  if (sessionStorage.getItem(authKey) === "true") {{
+    showApp();
+  }}
 }})();
 </script>
 </body>
@@ -905,6 +1402,8 @@ def main():
         course_starters[course["html"]] = zip_href
 
     write_text(BUILD / "index.html", landing_page())
+    write_text(BUILD / LIVE_CODE_PAGE, live_code_page())
+    write_text(BUILD / LIVE_QUIZ_PAGE, live_quiz_page())
 
     run_pandoc(course_index_markdown(courses), BUILD / COURSE_INDEX, True, "Documentation en ligne")
     postprocess_doc_page(BUILD / COURSE_INDEX, courses, COURSE_INDEX, "course", FULL_PDF, FULL_ZIP)
@@ -934,7 +1433,7 @@ def main():
         postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"], course_starters[course["html"]])
         run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
 
-    write_text(BUILD / ADMIN_PAGE, admin_page(admin_sections))
+    write_text(BUILD / ADMIN_PAGE, admin_page(admin_sections, live_question_bank(courses)))
     build_full_pdf(courses)
     build_quiz_pdf(courses)
 
