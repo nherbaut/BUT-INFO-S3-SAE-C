@@ -646,6 +646,35 @@ quiz-player {
   margin-top: 1rem;
 }
 
+.admin-group {
+  min-width: 10rem;
+}
+
+.admin-message {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.admin-section {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.admin-section__course {
+  color: var(--bs-secondary-color);
+  font-size: 0.85rem;
+}
+
+.admin-section__title {
+  font-weight: 700;
+}
+
+.admin-section__title--h2 {
+  font-weight: 500;
+  padding-left: 1rem;
+}
+
 @media (max-width: 900px) {
   .c-player__body {
     grid-template-columns: 1fr;

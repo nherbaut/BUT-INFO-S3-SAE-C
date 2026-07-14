@@ -28,6 +28,7 @@ FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
 FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 QUIZ_INDEX = "quiz.html"
 QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
+ADMIN_PAGE = "admin.html"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
 CODE_FENCE_C = re.compile(r"^```\s*c\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
@@ -465,7 +466,7 @@ def page_headings(body):
     return headings
 
 
-def main_nav(active):
+def main_nav(active, include_admin=False):
     items = [
         ("index.html", "Accueil", active == "home"),
         (COURSE_INDEX, "Cours", active == "course"),
@@ -479,6 +480,10 @@ def main_nav(active):
         active_class = " active" if is_active else ""
         aria = ' aria-current="page"' if is_active else ""
         links.append(f'<li class="nav-item"><a class="nav-link{active_class}"{aria} href="{href}">{label}</a></li>')
+    if include_admin:
+        active_class = " active" if active == "admin" else ""
+        aria = ' aria-current="page"' if active == "admin" else ""
+        links.append(f'<li class="nav-item"><a class="nav-link{active_class}"{aria} href="{ADMIN_PAGE}">Admin</a></li>')
     return f"""
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
   <div class="container-fluid">
@@ -684,6 +689,136 @@ def landing_page():
 """
 
 
+def admin_page(sections):
+    section_rows = []
+    for section in sections:
+        level_class = "admin-section__title--h2" if section["level"] == 2 else ""
+        section_rows.append(
+            f"""
+<article class="admin-section list-group-item">
+  <div>
+    <div class="admin-section__course">{html.escape(section["course_title"])}</div>
+    <div class="admin-section__title {level_class}">{html.escape(section["title"])}</div>
+  </div>
+  <button class="btn btn-primary btn-sm" type="button" data-send-url="{html.escape(section["href"])}">Envoyer</button>
+</article>
+"""
+        )
+    return f"""<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin SAE-C</title>
+  <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="player/c-player.css">
+  <script>
+    document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
+  </script>
+</head>
+<body>
+{main_nav("admin", include_admin=True)}
+<main class="container py-4 admin-page">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1>Admin SAE-C</h1>
+      <p class="text-body-secondary mb-0">Envoyer une navigation, du code C ou un message aux etudiants connectes.</p>
+    </div>
+    <label class="admin-group">
+      <span class="form-label fw-semibold">Groupe</span>
+      <select class="form-select" data-admin-group>
+        <option value="S3A">A</option>
+        <option value="S3B">B</option>
+        <option value="S3C">C</option>
+      </select>
+    </label>
+  </div>
+
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Message libre</div>
+    <div class="card-body">
+      <label class="form-label" for="admin-message">Texte ou code C</label>
+      <textarea class="form-control admin-message" id="admin-message" data-admin-message rows="12"></textarea>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <button class="btn btn-primary" type="button" data-send-text>Envoyer comme texte</button>
+        <button class="btn btn-secondary" type="button" data-send-code>Envoyer comme code C</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header fw-semibold">Sections du cours</div>
+    <div class="list-group list-group-flush">
+      {''.join(section_rows)}
+    </div>
+  </section>
+
+  <div class="admin-status alert mt-4" data-admin-status hidden></div>
+</main>
+{site_footer()}
+{read_text(PLAYER_SRC / "site-theme.js")}
+<script>
+(() => {{
+  const topics = {{
+    S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C",
+    S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C",
+    S3C: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3C-SAE-C",
+  }};
+  const groupSelect = document.querySelector("[data-admin-group]");
+  const messageInput = document.querySelector("[data-admin-message]");
+  const status = document.querySelector("[data-admin-status]");
+
+  function setStatus(kind, message) {{
+    status.hidden = false;
+    status.className = `admin-status alert mt-4 alert-${{kind}}`;
+    status.textContent = message;
+  }}
+
+  function currentTopic() {{
+    return topics[groupSelect.value];
+  }}
+
+  async function publish(message) {{
+    const topic = currentTopic();
+    if (!topic) {{
+      setStatus("warning", "Choisir un groupe.");
+      return;
+    }}
+    try {{
+      const response = await fetch(topic, {{
+        method: "POST",
+        body: message,
+      }});
+      if (!response.ok) {{
+        throw new Error(`HTTP ${{response.status}}`);
+      }}
+      setStatus("success", `Notification envoyee au groupe ${{groupSelect.options[groupSelect.selectedIndex].text}}.`);
+    }} catch (error) {{
+      setStatus("danger", `Echec de l'envoi : ${{error.message}}`);
+    }}
+  }}
+
+  document.querySelectorAll("[data-send-url]").forEach((button) => {{
+    button.addEventListener("click", () => {{
+      const url = new URL(button.dataset.sendUrl, window.location.href);
+      publish(url.href);
+    }});
+  }});
+
+  document.querySelector("[data-send-text]").addEventListener("click", () => {{
+    publish(messageInput.value);
+  }});
+
+  document.querySelector("[data-send-code]").addEventListener("click", () => {{
+    publish(`c\\n${{messageInput.value}}`);
+  }});
+}})();
+</script>
+</body>
+</html>
+"""
+
+
 def course_index_markdown(courses):
     lines = ["# Documentation en ligne", ""]
     lines.append("Supports de cours et exercices interactifs pour BUT INFO S3 SAE-C.")
@@ -780,12 +915,26 @@ def main():
     run_pandoc(quiz_index_markdown(courses), BUILD / QUIZ_INDEX, True, "Mini-quiz")
     postprocess_doc_page(BUILD / QUIZ_INDEX, courses, QUIZ_INDEX, "quiz", QUIZ_PDF, None)
 
+    admin_sections = []
     for course in courses:
         source = read_text(course["path"])
         run_pandoc(expand_markdown(source, html_mode=True), BUILD / course["html"], True, course["title"])
+        raw_body = TITLE_BLOCK_RE.sub("", extract_body(read_text(BUILD / course["html"]))).strip()
+        for heading in page_headings(raw_body):
+            if heading["id"] == "ntfy-chat-group-title":
+                continue
+            admin_sections.append(
+                {
+                    "course_title": course["title"],
+                    "href": f'{course["html"]}#{heading["id"]}',
+                    "level": heading["level"],
+                    "title": heading["title"],
+                }
+            )
         postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"], course_starters[course["html"]])
         run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
 
+    write_text(BUILD / ADMIN_PAGE, admin_page(admin_sections))
     build_full_pdf(courses)
     build_quiz_pdf(courses)
 
