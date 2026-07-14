@@ -29,6 +29,8 @@ FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 QUIZ_INDEX = "quiz.html"
 QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
+CODE_FENCE_C = re.compile(r"^```\s*c\s*$", re.I)
+CODE_FENCE_END = re.compile(r"^```\s*$")
 QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
 QUESTION_START = re.compile(r"^:::\s+question(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
 DIV_END = re.compile(r"^:::\s*$")
@@ -250,6 +252,26 @@ def encode_data(value):
     return base64.b64encode(json.dumps(value, ensure_ascii=False).encode("utf-8")).decode("ascii")
 
 
+def render_html_code_example(source, index):
+    runnable = "int main" in source
+    payload = encode_data(
+        {
+            "id": f"code-example-{index}",
+            "title": f"Exemple C {index}",
+            "statement": "",
+            "sources": ["main.c"],
+            "main": "main.c",
+            "stdin": "",
+            "expected_stdout": "",
+            "expected_stderr": "",
+            "path": "",
+            "files": [{"name": "main.c", "content": source}],
+            "browser_runnable": runnable,
+        }
+    )
+    return f'<c-player data-readonly="true" data-exercise-b64="{payload}"></c-player>'
+
+
 def render_html_quiz(quiz, fold_validated=False):
     payload = encode_data(quiz)
     folded = ' data-fold-validated="true"' if fold_validated else ""
@@ -352,8 +374,21 @@ def expand_markdown(source, html_mode):
     output = []
     index = 0
     quiz_count = 0
+    code_example_count = 0
     while index < len(lines):
         line = lines[index]
+        if html_mode and CODE_FENCE_C.match(line):
+            index += 1
+            code_lines = []
+            while index < len(lines) and not CODE_FENCE_END.match(lines[index]):
+                code_lines.append(lines[index])
+                index += 1
+            if index >= len(lines):
+                raise ValueError("Bloc de code C non ferme")
+            index += 1
+            code_example_count += 1
+            output.append(render_html_code_example("\n".join(code_lines) + "\n", code_example_count))
+            continue
         if QUIZ_START.match(line):
             block, index = collect_div_block(lines, index)
             quiz_count += 1
@@ -396,6 +431,8 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
                 str(PLAYER_DST / "quiz-player.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "site-theme.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "ntfy-chat.js"),
                 "-o",
                 str(output_path),
             ]
@@ -418,7 +455,7 @@ def extract_body(document):
 
 
 def replace_body(document, body):
-    return BODY_RE.sub(f"<body>\n{body}\n</body>", document)
+    return BODY_RE.sub(lambda _match: f"<body>\n{body}\n</body>", document)
 
 
 def page_headings(body):
@@ -638,7 +675,10 @@ def landing_page():
   draw();
 }})();
 </script>
+{read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{read_text(PLAYER_SRC / "c-player.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
+{read_text(PLAYER_SRC / "ntfy-chat.js")}
 </body>
 </html>
 """

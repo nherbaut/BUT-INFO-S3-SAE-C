@@ -6,6 +6,7 @@ class CPlayer extends HTMLElement {
     this.initialCode = this.exercise.files?.[0]?.content || "";
     this.browserRunnable = this.exercise.browser_runnable !== false;
     this.render();
+    this.refreshHighlight();
   }
 
   parseExercise() {
@@ -62,7 +63,10 @@ class CPlayer extends HTMLElement {
           <div class="c-player__editor">
             <label>
               <strong>Starter code</strong>
-              <textarea class="c-player__code" spellcheck="false" ${this.readonly ? "readonly" : ""}>${this.escape(this.initialCode)}</textarea>
+              <span class="c-player__code-wrap">
+                <pre class="c-player__highlight" aria-hidden="true"></pre>
+                <textarea class="c-player__code" spellcheck="false" ${this.readonly ? "readonly" : ""}>${this.escape(this.initialCode)}</textarea>
+              </span>
             </label>
             ${stdinBlock}
           </div>
@@ -72,6 +76,8 @@ class CPlayer extends HTMLElement {
     `;
     this.querySelector(".c-player__run").addEventListener("click", () => this.run());
     this.querySelector(".c-player__reset").addEventListener("click", () => this.reset());
+    this.querySelector(".c-player__code").addEventListener("input", () => this.refreshHighlight());
+    this.querySelector(".c-player__code").addEventListener("scroll", () => this.syncHighlightScroll());
     this.updateStatus();
   }
 
@@ -82,6 +88,7 @@ class CPlayer extends HTMLElement {
       stdin.value = this.exercise.stdin || "";
     }
     this.clearOutputs();
+    this.refreshHighlight();
   }
 
   async run() {
@@ -184,6 +191,62 @@ class CPlayer extends HTMLElement {
     } else {
       this.setStatus("Runtime C navigateur absent : sortie de reference uniquement.");
     }
+  }
+
+  refreshHighlight() {
+    const code = this.querySelector(".c-player__code");
+    const highlight = this.querySelector(".c-player__highlight");
+    if (!code || !highlight) {
+      return;
+    }
+    highlight.innerHTML = this.highlightC(code.value);
+    this.syncHighlightScroll();
+  }
+
+  syncHighlightScroll() {
+    const code = this.querySelector(".c-player__code");
+    const highlight = this.querySelector(".c-player__highlight");
+    if (!code || !highlight) {
+      return;
+    }
+    highlight.scrollTop = code.scrollTop;
+    highlight.scrollLeft = code.scrollLeft;
+  }
+
+  highlightC(source) {
+    const tokenPattern = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|^\s*#\s*[A-Za-z_][A-Za-z0-9_]*|\b(?:auto|break|case|const|continue|default|do|else|enum|extern|for|goto|if|register|return|sizeof|static|struct|switch|typedef|union|volatile|while)\b|\b(?:char|double|float|int|long|short|signed|unsigned|void|size_t|FILE|bool)\b|\b(?:NULL|EXIT_SUCCESS|EXIT_FAILURE|true|false)\b|\b(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)\b)/gm;
+    let cursor = 0;
+    let html = "";
+    for (const match of source.matchAll(tokenPattern)) {
+      html += this.escape(source.slice(cursor, match.index));
+      html += this.highlightToken(match[0]);
+      cursor = match.index + match[0].length;
+    }
+    html += this.escape(source.slice(cursor));
+    if (html.endsWith("\n")) {
+      html += " ";
+    }
+    return html;
+  }
+
+  highlightToken(token) {
+    let kind = "plain";
+    if (token.startsWith("/*") || token.startsWith("//")) {
+      kind = "comment";
+    } else if (token.startsWith('"') || token.startsWith("'")) {
+      kind = "string";
+    } else if (/^\s*#/.test(token)) {
+      kind = "preproc";
+    } else if (/^(char|double|float|int|long|short|signed|unsigned|void|size_t|FILE|bool)$/.test(token)) {
+      kind = "type";
+    } else if (/^(NULL|EXIT_SUCCESS|EXIT_FAILURE|true|false)$/.test(token)) {
+      kind = "constant";
+    } else if (/^(0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)$/.test(token)) {
+      kind = "number";
+    } else {
+      kind = "keyword";
+    }
+    return `<span class="c-token c-token--${kind}">${this.escape(token)}</span>`;
   }
 
   escape(value) {
