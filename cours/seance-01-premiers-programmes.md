@@ -15,6 +15,20 @@
 
 ## Variables et types simples
 
+::: quiz {#quiz-s1-types}
+title: Types et variables
+
+::: question {#q-s1-variable-int}
+title: Que stocke une variable `int` ?
+description: On declare `int note = 12;`.
+
+- [x] Une valeur entiere copiee dans la variable
+- [ ] Une reference vers un objet Java
+  hint: En C, une variable simple contient directement sa valeur.
+- [ ] Une chaine de caracteres
+:::
+:::
+
 ## Conditions
 
 {{ c_exercise: exercices/seance-01/max3 }}

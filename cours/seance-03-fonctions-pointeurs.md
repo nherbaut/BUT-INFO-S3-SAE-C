@@ -16,6 +16,20 @@
 
 ## Copier une adresse
 
+::: quiz {#quiz-s3-passage}
+title: Passage d'arguments
+
+::: question {#q-s3-copie-adresse}
+title: Que recoit une fonction appelee avec `f(&x)` ?
+description: On veut modifier indirectement une variable externe.
+
+- [ ] La variable `x` elle-meme
+  hint: Les arguments C sont toujours passes par copie.
+- [x] Une copie de l'adresse de `x`
+- [ ] Une reference Java vers `x`
+:::
+:::
+
 ## Modifier une variable locale pointeur
 
 ## Modifier l'objet pointe

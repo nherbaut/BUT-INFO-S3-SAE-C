@@ -24,7 +24,14 @@ PUBLIC_REPO = "https://github.com/nherbaut/BUT-INFO-S3-SAE-C"
 COURSE_INDEX = "index-cours.html"
 FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
 FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
+QUIZ_INDEX = "quiz.html"
+QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
+QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
+QUESTION_START = re.compile(r"^:::\s+question(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
+DIV_END = re.compile(r"^:::\s*$")
+OPTION_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
+FIELD_RE = re.compile(r"^([A-Za-z_-]+):\s*(.*)$")
 BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.S)
 HEAD_RE = re.compile(r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>", re.S)
 TAG_RE = re.compile(r"<[^>]+>")
@@ -83,6 +90,102 @@ def all_exercises():
     return exercises
 
 
+def collect_div_block(lines, start_index):
+    block = [lines[start_index]]
+    depth = 1
+    index = start_index + 1
+    while index < len(lines):
+        line = lines[index]
+        if QUIZ_START.match(line) or QUESTION_START.match(line):
+            depth += 1
+        elif DIV_END.match(line):
+            depth -= 1
+        block.append(line)
+        index += 1
+        if depth == 0:
+            return block, index
+    raise ValueError("Bloc quiz non ferme")
+
+
+def parse_quiz(block, fallback_id):
+    start = QUIZ_START.match(block[0])
+    quiz_id = start.group(1) if start and start.group(1) else fallback_id
+    quiz = {"id": quiz_id, "title": quiz_id, "questions": []}
+    index = 1
+    while index < len(block) - 1:
+        line = block[index]
+        question_start = QUESTION_START.match(line)
+        if question_start:
+            question_block, new_index = collect_div_block(block, index)
+            quiz["questions"].append(parse_question(question_block, f"{quiz_id}-q{len(quiz['questions']) + 1}"))
+            index = new_index
+            continue
+        field = FIELD_RE.match(line)
+        if field:
+            key = field.group(1).strip().lower()
+            if key in {"title", "description"}:
+                quiz[key] = field.group(2).strip()
+        index += 1
+    if not quiz["questions"]:
+        raise ValueError(f"Quiz {quiz_id} sans question")
+    return quiz
+
+
+def parse_question(block, fallback_id):
+    start = QUESTION_START.match(block[0])
+    question_id = start.group(1) if start and start.group(1) else fallback_id
+    question = {"id": question_id, "title": question_id, "description": "", "options": []}
+    current_option = None
+    for line in block[1:-1]:
+        option = OPTION_RE.match(line)
+        if option:
+            current_option = {
+                "id": f"{question_id}-o{len(question['options']) + 1}",
+                "text": option.group(2).strip(),
+                "correct": option.group(1).lower() == "x",
+                "hint": "",
+            }
+            question["options"].append(current_option)
+            continue
+        field = FIELD_RE.match(line.strip())
+        if field:
+            key = field.group(1).strip().lower()
+            value = field.group(2).strip()
+            if current_option and key == "hint":
+                current_option["hint"] = value
+            elif key in {"title", "description"}:
+                question[key] = value
+    if not question["options"]:
+        raise ValueError(f"Question {question_id} sans option")
+    if not any(option["correct"] for option in question["options"]):
+        raise ValueError(f"Question {question_id} sans bonne reponse")
+    return question
+
+
+def quizzes_from_source(source, course):
+    lines = source.splitlines()
+    quizzes = []
+    index = 0
+    while index < len(lines):
+        if QUIZ_START.match(lines[index]):
+            block, index = collect_div_block(lines, index)
+            quiz = parse_quiz(block, f"{course['stem']}-quiz-{len(quizzes) + 1}")
+            quiz["course_title"] = course["title"]
+            quiz["course_html"] = course["html"]
+            quiz["course_stem"] = course["stem"]
+            quizzes.append(quiz)
+        else:
+            index += 1
+    return quizzes
+
+
+def all_quizzes(courses):
+    quizzes = []
+    for course in courses:
+        quizzes.extend(quizzes_from_source(read_text(course["path"]), course))
+    return quizzes
+
+
 def render_html_player(kind, path_text):
     exercise = load_exercise(path_text)
     readonly = "true" if kind == "c_demo" else "false"
@@ -107,6 +210,33 @@ def render_html_player(kind, path_text):
 </div>
 </details>
 """
+
+
+def encode_data(value):
+    return base64.b64encode(json.dumps(value, ensure_ascii=False).encode("utf-8")).decode("ascii")
+
+
+def render_html_quiz(quiz):
+    payload = encode_data(quiz)
+    return f'<quiz-player data-quiz-b64="{payload}"></quiz-player>'
+
+
+def render_pdf_quiz(quiz, show_answers=True):
+    blocks = [f"## {quiz['course_title']} - {quiz['title']}", ""]
+    if quiz.get("description"):
+        blocks.extend([quiz["description"], ""])
+    for question in quiz["questions"]:
+        blocks.append(f"### {question['title']}")
+        blocks.append("")
+        if question.get("description"):
+            blocks.extend([question["description"], ""])
+        for option in question["options"]:
+            marker = "[x]" if option["correct"] and show_answers else "[ ]"
+            blocks.append(f"- {marker} {option['text']}")
+            if option.get("hint"):
+                blocks.append(f"  - Indice : {option['hint']}")
+        blocks.append("")
+    return "\n".join(blocks)
 
 
 def exercise_directives(source):
@@ -183,8 +313,18 @@ def render_pdf_block(kind, path_text):
 
 
 def expand_markdown(source, html_mode):
+    lines = source.splitlines()
     output = []
-    for line in source.splitlines():
+    index = 0
+    quiz_count = 0
+    while index < len(lines):
+        line = lines[index]
+        if QUIZ_START.match(line):
+            block, index = collect_div_block(lines, index)
+            quiz_count += 1
+            if html_mode:
+                output.append(render_html_quiz(parse_quiz(block, f"quiz-{quiz_count}")))
+            continue
         match = DIRECTIVE.match(line)
         if match:
             kind = match.group(1)
@@ -192,6 +332,7 @@ def expand_markdown(source, html_mode):
             output.append(render_html_player(kind, path_text) if html_mode else render_pdf_block(kind, path_text))
         else:
             output.append(line)
+        index += 1
     return "\n".join(output) + "\n"
 
 
@@ -212,7 +353,16 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
         ]
         if TSCC_RUNTIME.exists():
             command.extend(["--include-after-body", str(TSCC_RUNTIME)])
-        command.extend(["--include-after-body", str(PLAYER_DST / "c-player.js"), "-o", str(output_path)])
+        command.extend(
+            [
+                "--include-after-body",
+                str(PLAYER_DST / "c-player.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "quiz-player.js"),
+                "-o",
+                str(output_path),
+            ]
+        )
         subprocess.run(command, check=True, cwd=BUILD)
     else:
         subprocess.run(["pandoc", str(tmp), "-o", str(output_path)], check=True)
@@ -242,6 +392,7 @@ def main_nav(active):
         ("index.html", "Accueil", active == "home"),
         (COURSE_INDEX, "Cours", active == "course"),
         ("exercices.html", "Exercices", active == "exercises"),
+        (QUIZ_INDEX, "Quiz", active == "quiz"),
         (FULL_PDF, "PDF", False),
         (PUBLIC_REPO, "Depot", False),
     ]
@@ -363,7 +514,7 @@ def landing_page():
     <div class="row g-3">
       <div class="col-md-4"><a class="landing-next__item" href="{COURSE_INDEX}">Documentation en ligne</a></div>
       <div class="col-md-4"><a class="landing-next__item" href="exercices.html">Tous les exercices</a></div>
-      <div class="col-md-4"><a class="landing-next__item" href="{FULL_PDF}">PDF complet</a></div>
+      <div class="col-md-4"><a class="landing-next__item" href="{QUIZ_INDEX}">Mini-quiz</a></div>
     </div>
   </section>
 </main>
@@ -453,6 +604,8 @@ def course_index_markdown(courses):
         lines.append(f"- [{course['title']}]({course['html']})")
     lines.append("")
     lines.append(f"[Telecharger le PDF complet]({FULL_PDF})")
+    lines.append("")
+    lines.append(f"[Reviser avec les mini-quiz]({QUIZ_INDEX})")
     return "\n".join(lines) + "\n"
 
 
@@ -467,6 +620,32 @@ def exercises_markdown():
         lines.append(f"{{{{ c_exercise: {rel_path} }}}}")
         lines.append("")
     return "\n".join(lines)
+
+
+def quiz_index_markdown(courses):
+    lines = ["# Mini-quiz", ""]
+    lines.append("Tous les quiz du support. La validation est enregistree localement dans le navigateur.")
+    lines.append("")
+    for course in courses:
+        quizzes = quizzes_from_source(read_text(course["path"]), course)
+        if not quizzes:
+            continue
+        lines.append(f"## {course['title']}")
+        lines.append("")
+        for quiz in quizzes:
+            lines.append(render_html_quiz(quiz))
+            lines.append("")
+    return "\n".join(lines)
+
+
+def build_quiz_pdf(courses):
+    blocks = ["# Mini-quiz BUT INFO S3 SAE-C", ""]
+    for course in courses:
+        quizzes = quizzes_from_source(read_text(course["path"]), course)
+        for quiz in quizzes:
+            blocks.append(render_pdf_quiz(quiz))
+            blocks.append("")
+    run_pandoc("\n".join(blocks), BUILD / QUIZ_PDF, html_mode=False)
 
 
 def build_full_pdf(courses):
@@ -509,6 +688,9 @@ def main():
     run_pandoc(expand_markdown(exercises_markdown(), html_mode=True), BUILD / "exercices.html", True, "Exercices")
     postprocess_doc_page(BUILD / "exercices.html", courses, "exercices.html", "exercises", None, FULL_ZIP)
 
+    run_pandoc(quiz_index_markdown(courses), BUILD / QUIZ_INDEX, True, "Mini-quiz")
+    postprocess_doc_page(BUILD / QUIZ_INDEX, courses, QUIZ_INDEX, "quiz", QUIZ_PDF, None)
+
     for course in courses:
         source = read_text(course["path"])
         run_pandoc(expand_markdown(source, html_mode=True), BUILD / course["html"], True, course["title"])
@@ -516,6 +698,7 @@ def main():
         run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
 
     build_full_pdf(courses)
+    build_quiz_pdf(courses)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,20 @@
 
 ## `free`
 
+::: quiz {#quiz-s4-duree-vie}
+title: Duree de vie dynamique
+
+::: question {#q-s4-free}
+title: Que faut-il faire avec une zone obtenue par `malloc` ?
+description: On alloue un tableau avec `malloc`.
+
+- [x] Appeler `free` quand la zone n'est plus utile
+- [ ] La zone disparait automatiquement a la fin du bloc
+  hint: Ce comportement correspond aux variables automatiques, pas au tas.
+- [x] Eviter d'utiliser le pointeur apres liberation
+:::
+:::
+
 ## `realloc`
 
 {{ c_exercise: exercices/seance-04/tableau-dynamique }}

@@ -31,6 +31,21 @@ gcc -std=c11 -Wall -Wextra -pedantic -g
 - `make memcheck`
 - `make clean`
 
+::: quiz {#quiz-s2-make}
+title: Makefile minimal
+
+::: question {#q-s2-cibles}
+title: Quelles cibles doivent etre disponibles ?
+description: Le depot doit permettre de compiler, executer et tester localement.
+
+- [x] `make`
+- [x] `make test`
+- [ ] `make push`
+  hint: Le depot local ne doit pas publier automatiquement.
+- [x] `make clean`
+:::
+:::
+
 ## Compilation separee
 
 ## Fichiers d'en-tete
