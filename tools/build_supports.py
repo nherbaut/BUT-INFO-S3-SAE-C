@@ -242,6 +242,50 @@ def live_question_bank(courses):
     return questions
 
 
+def admin_flow_items(course, source, raw_body):
+    generated_headings = page_headings(raw_body)
+    heading_index = 0
+    items = []
+    lines = source.splitlines()
+    index = 0
+    while index < len(lines):
+        heading_match = re.match(r"^(#{1,2})\s+(.+)$", lines[index])
+        if heading_match:
+            level = len(heading_match.group(1))
+            while heading_index < len(generated_headings) and generated_headings[heading_index]["level"] != level:
+                heading_index += 1
+            if heading_index < len(generated_headings):
+                heading = generated_headings[heading_index]
+                if heading["id"] != "ntfy-chat-group-title":
+                    items.append(
+                        {
+                            "type": "section",
+                            "course_title": course["title"],
+                            "href": f'{course["html"]}#{heading["id"]}',
+                            "level": heading["level"],
+                            "title": heading["title"],
+                        }
+                    )
+                heading_index += 1
+        elif QUIZ_START.match(lines[index]):
+            block, index = collect_div_block(lines, index)
+            quiz = parse_quiz(block, f"{course['stem']}-flow-quiz-{len(items) + 1}")
+            for question in quiz["questions"]:
+                items.append(
+                    {
+                        "type": "question",
+                        "id": f'{course["stem"]}:{quiz["id"]}:{question["id"]}',
+                        "course_title": course["title"],
+                        "quiz_title": quiz["title"],
+                        "title": question["title"],
+                        "question": question,
+                    }
+                )
+            continue
+        index += 1
+    return items
+
+
 def render_html_player(kind, path_text):
     exercise = load_exercise(path_text)
     readonly = "true" if kind == "c_demo" else "false"
@@ -1001,22 +1045,36 @@ def live_quiz_page():
 """
 
 
-def admin_page(sections, question_bank):
+def admin_page(flow_items, question_bank):
     section_rows = []
-    for section in sections:
-        level_class = "admin-section__title--h2" if section["level"] == 2 else ""
-        section_rows.append(
-            f"""
+    for index, item in enumerate(flow_items):
+        if item["type"] == "section":
+            level_class = "admin-section__title--h2" if item["level"] == 2 else ""
+            section_rows.append(
+                f"""
 <article class="admin-section list-group-item">
   <div>
-    <div class="admin-section__course">{html.escape(section["course_title"])}</div>
-    <div class="admin-section__title {level_class}">{html.escape(section["title"])}</div>
+    <div class="admin-section__course">{html.escape(item["course_title"])}</div>
+    <div class="admin-section__title {level_class}">{html.escape(item["title"])}</div>
   </div>
-  <button class="btn btn-primary btn-sm" type="button" data-send-url="{html.escape(section["href"])}">Envoyer</button>
+  <button class="btn btn-primary btn-sm" type="button" data-flow-index="{index}">Envoyer</button>
 </article>
 """
-        )
+            )
+        else:
+            section_rows.append(
+                f"""
+<article class="admin-section admin-section--question list-group-item">
+  <div>
+    <div class="admin-section__course">{html.escape(item["course_title"])} - {html.escape(item["quiz_title"])}</div>
+    <div class="admin-section__title admin-section__title--h2">Question - {html.escape(item["title"])}</div>
+  </div>
+  <button class="btn btn-secondary btn-sm" type="button" data-flow-index="{index}">Poser</button>
+</article>
+"""
+            )
     question_bank_b64 = encode_data(question_bank)
+    flow_b64 = encode_data(flow_items)
     return f"""<!doctype html>
 <html lang="fr">
 <head>
@@ -1110,6 +1168,19 @@ def admin_page(sections, question_bank):
 
   <div class="admin-status alert mt-4" data-admin-status hidden></div>
 </main>
+<div class="admin-results-modal" data-results-modal hidden>
+  <div class="admin-results-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-results-title">
+    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+      <div>
+        <h2 class="h4 mb-1" id="admin-results-title" data-results-title>Resultats</h2>
+        <div class="text-body-secondary" data-results-subtitle></div>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" type="button" data-close-results>Fermer</button>
+    </div>
+    <div data-results-body></div>
+    <div class="d-flex flex-wrap gap-2 justify-content-end mt-3" data-results-actions></div>
+  </div>
+</div>
 {site_footer()}
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
@@ -1117,7 +1188,9 @@ def admin_page(sections, question_bank):
   const authDigest = "{ADMIN_DIGEST}";
   const authKey = "sae-c.admin.auth.v1";
   const statsKey = "sae-c.admin.liveStats.v1";
+  const flowIndexKey = "sae-c.admin.activeFlowIndex.v1";
   const questionBank = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob("{question_bank_b64}"), (char) => char.charCodeAt(0))));
+  const flowItems = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob("{flow_b64}"), (char) => char.charCodeAt(0))));
   const topics = {{
     S3A: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3A-SAE-C",
     S3B: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3B-SAE-C",
@@ -1130,6 +1203,7 @@ def admin_page(sections, question_bank):
   }};
   let responseSource = null;
   let activeQuiz = readActiveQuiz();
+  let activeFlowIndex = readActiveFlowIndex();
   const groupSelect = document.querySelector("[data-admin-group]");
   const messageInput = document.querySelector("[data-admin-message]");
   const questionSelect = document.querySelector("[data-question-bank]");
@@ -1138,6 +1212,11 @@ def admin_page(sections, question_bank):
   const authPanel = document.querySelector("[data-admin-auth]");
   const appPanel = document.querySelector("[data-admin-app]");
   const authFeedback = document.querySelector("[data-admin-auth-feedback]");
+  const resultsModal = document.querySelector("[data-results-modal]");
+  const resultsTitle = document.querySelector("[data-results-title]");
+  const resultsSubtitle = document.querySelector("[data-results-subtitle]");
+  const resultsBody = document.querySelector("[data-results-body]");
+  const resultsActions = document.querySelector("[data-results-actions]");
 
   function setStatus(kind, message) {{
     status.hidden = false;
@@ -1252,9 +1331,13 @@ def admin_page(sections, question_bank):
     return question;
   }}
 
-  function startLiveQuiz(question) {{
+  function startLiveQuiz(question, flowIndex = null) {{
     const fullQuestion = normalizeQuestion(JSON.parse(JSON.stringify(question)));
     const quizId = `live-${{groupSelect.value}}-${{Date.now()}}`;
+    if (flowIndex !== null) {{
+      activeFlowIndex = flowIndex;
+      localStorage.setItem(flowIndexKey, String(flowIndex));
+    }}
     activeQuiz = {{
       id: quizId,
       group: groupSelect.value,
@@ -1271,6 +1354,7 @@ def admin_page(sections, question_bank):
       responseTopic: currentAdminTopic(),
     }}));
     renderStats();
+    openResultsModal("responses");
   }}
 
   function readStats() {{
@@ -1291,6 +1375,12 @@ def admin_page(sections, question_bank):
     }} catch (_error) {{
       return null;
     }}
+  }}
+
+  function readActiveFlowIndex() {{
+    const raw = localStorage.getItem(flowIndexKey);
+    const value = Number.parseInt(raw || "-1", 10);
+    return Number.isFinite(value) && value >= 0 ? value : null;
   }}
 
   function ensureSession(quiz) {{
@@ -1364,6 +1454,91 @@ def admin_page(sections, question_bank):
     leaderboardBox.innerHTML = leaders.length
       ? `<ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol>`
       : "Aucune reponse recue.";
+    if (!resultsModal.hidden) {{
+      openResultsModal(resultsModal.dataset.mode || "responses");
+    }}
+  }}
+
+  function activeSession() {{
+    if (!activeQuiz) return null;
+    const stats = readStats();
+    return stats.sessions[activeQuiz.id] || null;
+  }}
+
+  function correctOptionLabels() {{
+    if (!activeQuiz) return [];
+    return activeQuiz.question.options.filter((option) => option.correct).map((option) => option.text);
+  }}
+
+  function leaderboardHtml() {{
+    const stats = readStats();
+    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username)).slice(0, 10);
+    return leaders.length
+      ? `<ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol>`
+      : "<p class=\\"mb-0 text-body-secondary\\">Aucune reponse recue.</p>";
+  }}
+
+  function openResultsModal(mode) {{
+    if (!activeQuiz) return;
+    const session = activeSession() || {{ answers: [] }};
+    const correctAnswers = session.answers.filter((answer) => answer.correct);
+    resultsModal.hidden = false;
+    resultsModal.dataset.mode = mode;
+    resultsTitle.textContent = activeQuiz.title || "Question live";
+    resultsSubtitle.textContent = `Groupe ${{activeQuiz.group}}`;
+    if (mode === "responses") {{
+      resultsBody.innerHTML = `
+        <div class="admin-results-count">${{session.answers.length}}</div>
+        <p class="text-body-secondary mb-0">reponse(s) envoyee(s)</p>
+      `;
+      resultsActions.innerHTML = '<button class="btn btn-primary" type="button" data-show-correction>Afficher la correction</button>';
+      resultsActions.querySelector("[data-show-correction]").addEventListener("click", () => openResultsModal("correction"));
+      return;
+    }}
+    const podium = correctAnswers.slice(0, 3).map((answer, index) => `<li>${{index + 1}}. ${{escape(answer.username)}} <span class="text-body-secondary">${{escape(answer.answeredAt)}}</span></li>`).join("");
+    resultsBody.innerHTML = `
+      <h3 class="h5">Bonne reponse</h3>
+      <ul>${{correctOptionLabels().map((label) => `<li>${{escape(label)}}</li>`).join("")}}</ul>
+      <p>${{correctAnswers.length}} bonne(s) reponse(s) sur ${{session.answers.length}} reponse(s).</p>
+      <h3 class="h5">Podium</h3>
+      <ol>${{podium || "<li>Aucune bonne reponse.</li>"}}</ol>
+      <h3 class="h5">Leaderboard</h3>
+      ${{leaderboardHtml()}}
+    `;
+    resultsActions.innerHTML = '<button class="btn btn-primary" type="button" data-send-next>Passer a la suite</button>';
+    resultsActions.querySelector("[data-send-next]").addEventListener("click", sendNextFlowItem);
+  }}
+
+  function closeResultsModal() {{
+    resultsModal.hidden = true;
+  }}
+
+  function sendFlowItem(index) {{
+    const item = flowItems[index];
+    if (!item) {{
+      setStatus("warning", "Aucun element suivant dans le parcours.");
+      return;
+    }}
+    activeFlowIndex = index;
+    localStorage.setItem(flowIndexKey, String(index));
+    if (item.type === "section") {{
+      const url = new URL(item.href, window.location.href);
+      publish(url.href);
+      closeResultsModal();
+      return;
+    }}
+    if (item.type === "question") {{
+      startLiveQuiz(item.question, index);
+    }}
+  }}
+
+  function sendNextFlowItem() {{
+    if (activeFlowIndex === null) {{
+      setStatus("warning", "Aucune position courante dans le parcours.");
+      closeResultsModal();
+      return;
+    }}
+    sendFlowItem(activeFlowIndex + 1);
   }}
 
   function connectResponses() {{
@@ -1384,10 +1559,11 @@ def admin_page(sections, question_bank):
     }};
   }}
 
-  document.querySelectorAll("[data-send-url]").forEach((button) => {{
+  document.querySelector("[data-close-results]").addEventListener("click", closeResultsModal);
+
+  document.querySelectorAll("[data-flow-index]").forEach((button) => {{
     button.addEventListener("click", () => {{
-      const url = new URL(button.dataset.sendUrl, window.location.href);
-      publish(url.href);
+      sendFlowItem(Number.parseInt(button.dataset.flowIndex, 10));
     }});
   }});
 
@@ -1523,26 +1699,16 @@ def main():
     run_pandoc(quiz_index_markdown(courses), BUILD / QUIZ_INDEX, True, "Mini-quiz")
     postprocess_doc_page(BUILD / QUIZ_INDEX, courses, QUIZ_INDEX, "quiz", QUIZ_PDF, None)
 
-    admin_sections = []
+    admin_flow = []
     for course in courses:
         source = read_text(course["path"])
         run_pandoc(expand_markdown(source, html_mode=True), BUILD / course["html"], True, course["title"])
         raw_body = TITLE_BLOCK_RE.sub("", extract_body(read_text(BUILD / course["html"]))).strip()
-        for heading in page_headings(raw_body):
-            if heading["id"] == "ntfy-chat-group-title":
-                continue
-            admin_sections.append(
-                {
-                    "course_title": course["title"],
-                    "href": f'{course["html"]}#{heading["id"]}',
-                    "level": heading["level"],
-                    "title": heading["title"],
-                }
-            )
+        admin_flow.extend(admin_flow_items(course, source, raw_body))
         postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"], course_starters[course["html"]])
         run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
 
-    write_text(BUILD / ADMIN_PAGE, admin_page(admin_sections, live_question_bank(courses)))
+    write_text(BUILD / ADMIN_PAGE, admin_page(admin_flow, live_question_bank(courses)))
     build_full_pdf(courses)
     build_quiz_pdf(courses)
 
