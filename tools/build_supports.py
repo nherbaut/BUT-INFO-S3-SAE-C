@@ -1124,14 +1124,14 @@ def admin_page(flow_items, question_bank):
           <div class="fw-semibold" data-preview-title>Parcours du cours</div>
           <div class="text-body-secondary small" data-preview-subtitle>Selectionner une section ou une question.</div>
         </div>
-        <div class="admin-mirror__nav">
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-flow-prev>Precedent</button>
-          <button class="btn btn-primary btn-sm" type="button" data-flow-current>Envoyer l'element courant</button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-flow-next>Suivant</button>
-        </div>
       </div>
       <div class="admin-preview" data-admin-preview>
-        <div class="text-body-secondary">Le contenu du cours apparaitra ici.</div>
+        <iframe class="admin-preview__frame" data-admin-preview-frame title="Preview du cours"></iframe>
+        <div class="admin-mirror__nav">
+          <button class="btn btn-outline-secondary" type="button" data-flow-prev>Precedent</button>
+          <button class="btn btn-primary" type="button" data-flow-current>Envoyer l'element courant</button>
+          <button class="btn btn-outline-secondary" type="button" data-flow-next>Suivant</button>
+        </div>
       </div>
     </div>
     <aside class="admin-mirror__side">
@@ -1249,6 +1249,7 @@ def admin_page(flow_items, question_bank):
   const resultsBody = document.querySelector("[data-results-body]");
   const resultsActions = document.querySelector("[data-results-actions]");
   const preview = document.querySelector("[data-admin-preview]");
+  const previewFrame = document.querySelector("[data-admin-preview-frame]");
   const previewTitle = document.querySelector("[data-preview-title]");
   const previewSubtitle = document.querySelector("[data-preview-subtitle]");
   const chatMessages = document.querySelector("[data-admin-chat-messages]");
@@ -1321,10 +1322,12 @@ def admin_page(flow_items, question_bank):
     return flowItems.findIndex((item) => item.type === "section");
   }}
 
-  async function renderPreview() {{
+  function renderPreview() {{
     const item = currentFlowItem();
     if (!item) {{
-      preview.innerHTML = '<div class="text-body-secondary">Selectionner une section ou une question.</div>';
+      previewFrame.removeAttribute("src");
+      previewTitle.textContent = "Parcours du cours";
+      previewSubtitle.textContent = "Selectionner une section ou une question.";
       return;
     }}
     const sectionIndex = item.type === "section" ? activeFlowIndex : nearestSectionIndex(activeFlowIndex);
@@ -1332,27 +1335,10 @@ def admin_page(flow_items, question_bank):
     previewTitle.textContent = item.type === "question" ? `Question - ${{item.title}}` : item.title;
     previewSubtitle.textContent = item.type === "question" ? `${{item.course_title}} - ${{item.quiz_title}}` : item.course_title;
     if (!section?.href) {{
-      preview.innerHTML = '<div class="alert alert-warning mb-0">Aucune section associee a cette question.</div>';
+      previewFrame.removeAttribute("src");
       return;
     }}
-    try {{
-      const url = new URL(section.href, window.location.href);
-      const response = await fetch(url.pathname.split("/").pop());
-      if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
-      const documentText = await response.text();
-      const parsed = new DOMParser().parseFromString(documentText, "text/html");
-      const content = parsed.querySelector(".course-content") || parsed.querySelector("main") || parsed.body;
-      content.querySelectorAll("script, style, .ntfy-chat, .site-footer, nav, aside").forEach((node) => node.remove());
-      preview.innerHTML = content.innerHTML;
-      const anchor = section.href.split("#")[1];
-      if (anchor) {{
-        const escapedAnchor = window.CSS?.escape ? CSS.escape(anchor) : anchor.replaceAll('"', '\\"');
-        const target = preview.querySelector(`#${{escapedAnchor}}`);
-        if (target) target.scrollIntoView({{ block: "start" }});
-      }}
-    }} catch (error) {{
-      preview.innerHTML = `<div class="alert alert-danger mb-0">Impossible de charger la preview : ${{escape(error.message)}}</div>`;
-    }}
+    previewFrame.src = section.href;
   }}
 
   async function publish(message) {{
