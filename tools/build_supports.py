@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import base64
+import zipfile
 from pathlib import Path
 
 
@@ -17,10 +18,12 @@ PLAYER_DST = BUILD / "player"
 VENDOR_SRC = ROOT / "web" / "vendor"
 VENDOR_DST = BUILD / "vendor"
 PDF_DST = BUILD / "assets" / "pdf"
+ZIP_DST = BUILD / "assets" / "zip"
 TSCC_RUNTIME = PLAYER_DST / "tscc" / "tscc-runtime.js"
 PUBLIC_REPO = "https://github.com/nherbaut/BUT-INFO-S3-SAE-C"
 COURSE_INDEX = "index-cours.html"
 FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
+FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
 BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.S)
 HEAD_RE = re.compile(r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>", re.S)
@@ -69,6 +72,7 @@ def load_exercise(path_text):
         files.append({"name": source, "content": read_text(source_path)})
     meta["path"] = str(exercise_dir.relative_to(ROOT))
     meta["files"] = files
+    meta["browser_runnable"] = len(files) == 1
     return meta
 
 
@@ -83,24 +87,60 @@ def render_html_player(kind, path_text):
     exercise = load_exercise(path_text)
     readonly = "true" if kind == "c_demo" else "false"
     payload = base64.b64encode(json.dumps(exercise, ensure_ascii=False).encode("utf-8")).decode("ascii")
-    first_file = exercise["files"][0]
-    code = html.escape(first_file["content"]).replace("\\", "&#92;")
     title = html.escape(exercise["title"])
     statement = html.escape(exercise.get("statement", ""))
     local_path = html.escape(exercise["path"])
     command = html.escape(exercise["local"]["run"])
     label = "Demonstration executable" if kind == "c_demo" else "Exercice interactif"
+    browser_label = "Executable dans le navigateur" if exercise["browser_runnable"] else "Local uniquement"
+    browser_class = "text-bg-success" if exercise["browser_runnable"] else "text-bg-warning"
     return f"""
 <details class="embedded-exercise card my-4">
-<summary class="card-header h5">{label} - {title}</summary>
+<summary class="card-header h5">
+  <span>{label} - {title}</span>
+  <span class="badge {browser_class} ms-2">{browser_label}</span>
+</summary>
 <div class="card-body">
 <p class="card-text">{statement}</p>
 <p class="exercise-local card-text text-body-secondary">Version locale : <code>cd {local_path}</code>, puis <code>{command}</code>.</p>
-<pre><code class="language-c">{code}</code></pre>
 <c-player data-readonly="{readonly}" data-exercise-b64="{payload}"></c-player>
 </div>
 </details>
 """
+
+
+def exercise_directives(source):
+    paths = []
+    for line in source.splitlines():
+        match = DIRECTIVE.match(line)
+        if match:
+            paths.append(match.group(2).strip())
+    return paths
+
+
+def starter_zip_name(stem):
+    return f"assets/zip/{stem}-starters.zip"
+
+
+def write_starter_zip(output_path, exercises):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    seen = set()
+    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        common = EXERCISES / "common.mk"
+        if common.exists():
+            archive.write(common, common.relative_to(ROOT))
+        for exercise in exercises:
+            exercise_dir = ROOT / exercise["path"]
+            entries = ["exercise.json", "Makefile", *exercise.get("sources", [])]
+            for entry in entries:
+                file_path = exercise_dir / entry
+                if not file_path.exists() or not file_path.is_file():
+                    continue
+                arcname = str(file_path.relative_to(ROOT))
+                if arcname in seen:
+                    continue
+                seen.add(arcname)
+                archive.write(file_path, arcname)
 
 
 def render_pdf_block(kind, path_text):
@@ -262,18 +302,23 @@ def right_sidebar(headings):
 """
 
 
-def doc_layout(body, courses, current, active, pdf_href=None):
+def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
     headings = page_headings(body)
-    pdf_link = ""
+    actions = []
     if pdf_href:
-        pdf_link = f'<p><a class="btn btn-outline-secondary btn-sm" href="{pdf_href}" download>Telecharger le PDF de cette page</a></p>'
+        actions.append(f'<a class="btn btn-outline-secondary btn-sm" href="{pdf_href}" download>Telecharger le PDF de cette page</a>')
+    if zip_href:
+        actions.append(f'<a class="btn btn-outline-secondary btn-sm" href="{zip_href}" download>Telecharger les starter codes</a>')
+    action_block = ""
+    if actions:
+        action_block = f'<p class="page-actions">{"".join(actions)}</p>'
     return f"""
 {main_nav(active)}
 <div class="container-fluid">
   <div class="row">
     {left_sidebar(courses, current)}
     <main class="course-content col-lg-8 py-4">
-      {pdf_link}
+      {action_block}
       {body}
     </main>
     {right_sidebar(headings)}
@@ -282,10 +327,10 @@ def doc_layout(body, courses, current, active, pdf_href=None):
 """
 
 
-def postprocess_doc_page(output_path, courses, current, active, pdf_href=None):
+def postprocess_doc_page(output_path, courses, current, active, pdf_href=None, zip_href=None):
     document = read_text(output_path)
     body = TITLE_BLOCK_RE.sub("", extract_body(document)).strip()
-    write_text(output_path, replace_body(document, doc_layout(body, courses, current, active, pdf_href)))
+    write_text(output_path, replace_body(document, doc_layout(body, courses, current, active, pdf_href, zip_href)))
 
 
 def landing_page():
@@ -436,6 +481,7 @@ def build_full_pdf(courses):
 def main():
     BUILD.mkdir(parents=True, exist_ok=True)
     PDF_DST.mkdir(parents=True, exist_ok=True)
+    ZIP_DST.mkdir(parents=True, exist_ok=True)
     if PLAYER_DST.exists():
         shutil.rmtree(PLAYER_DST)
     shutil.copytree(PLAYER_SRC, PLAYER_DST)
@@ -444,18 +490,29 @@ def main():
     shutil.copytree(VENDOR_SRC, VENDOR_DST)
 
     courses = course_infos()
+    all_starters = all_exercises()
+    write_starter_zip(BUILD / FULL_ZIP, all_starters)
+    course_starters = {}
+    for course in courses:
+        source = read_text(course["path"])
+        exercises = [load_exercise(path) for path in exercise_directives(source)]
+        zip_href = starter_zip_name(course["stem"]) if exercises else None
+        if zip_href:
+            write_starter_zip(BUILD / zip_href, exercises)
+        course_starters[course["html"]] = zip_href
+
     write_text(BUILD / "index.html", landing_page())
 
     run_pandoc(course_index_markdown(courses), BUILD / COURSE_INDEX, True, "Documentation en ligne")
-    postprocess_doc_page(BUILD / COURSE_INDEX, courses, COURSE_INDEX, "course", FULL_PDF)
+    postprocess_doc_page(BUILD / COURSE_INDEX, courses, COURSE_INDEX, "course", FULL_PDF, FULL_ZIP)
 
     run_pandoc(expand_markdown(exercises_markdown(), html_mode=True), BUILD / "exercices.html", True, "Exercices")
-    postprocess_doc_page(BUILD / "exercices.html", courses, "exercices.html", "exercises", None)
+    postprocess_doc_page(BUILD / "exercices.html", courses, "exercices.html", "exercises", None, FULL_ZIP)
 
     for course in courses:
         source = read_text(course["path"])
         run_pandoc(expand_markdown(source, html_mode=True), BUILD / course["html"], True, course["title"])
-        postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"])
+        postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"], course_starters[course["html"]])
         run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
 
     build_full_pdf(courses)

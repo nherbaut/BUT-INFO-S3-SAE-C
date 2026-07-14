@@ -4,6 +4,7 @@ class CPlayer extends HTMLElement {
     this.exercise = this.parseExercise();
     this.readonly = this.dataset.readonly === "true";
     this.initialCode = this.exercise.files?.[0]?.content || "";
+    this.browserRunnable = this.exercise.browser_runnable !== false;
     this.render();
   }
 
@@ -19,12 +20,14 @@ class CPlayer extends HTMLElement {
   render() {
     const title = this.exercise.title || "Programme C";
     const stdin = this.exercise.stdin || "";
+    const runDisabled = this.browserRunnable ? "" : "disabled";
+    const runnableLabel = this.browserRunnable ? "" : '<span class="c-player__badge">Local uniquement</span>';
     this.innerHTML = `
       <div class="c-player">
         <div class="c-player__bar">
-          <span class="c-player__title">${this.escape(title)}</span>
+          <span class="c-player__title">${this.escape(title)} ${runnableLabel}</span>
           <span class="c-player__actions">
-            <button class="c-player__run" type="button">Build & Run</button>
+            <button class="c-player__run" type="button" ${runDisabled}>Build & Run</button>
             <button class="c-player__reset" type="button">Reset</button>
           </span>
         </div>
@@ -71,6 +74,15 @@ class CPlayer extends HTMLElement {
 
   async run() {
     this.clearOutputs();
+    if (!this.browserRunnable) {
+      const newline = String.fromCharCode(10);
+      this.show({
+        compilerStderr: `Exercice multi-fichiers : execution navigateur indisponible.${newline}Telecharger le starter code ou cloner le depot, puis utiliser les commandes locales indiquees sous l'exercice.${newline}`,
+      });
+      this.setStatus("Exercice local uniquement.");
+      return;
+    }
+
     const source = this.querySelector(".c-player__code").value;
     const stdin = this.querySelector(".c-player__stdin").value;
 
@@ -145,7 +157,9 @@ class CPlayer extends HTMLElement {
   }
 
   updateStatus() {
-    if (window.CCompilerRuntime?.ready === false) {
+    if (!this.browserRunnable) {
+      this.setStatus("Exercice multi-fichiers : utiliser le Makefile local.");
+    } else if (window.CCompilerRuntime?.ready === false) {
       this.setStatus("Runtime C navigateur detecte, mais pas encore pret.");
     } else if (window.CCompilerRuntime?.run) {
       this.setStatus("Runtime C navigateur pret.");

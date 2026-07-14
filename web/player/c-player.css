@@ -91,8 +91,18 @@
   max-width: 980px;
 }
 
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .embedded-exercise > summary {
+  align-items: center;
   cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   list-style-position: inside;
 }
 
@@ -144,6 +154,11 @@ c-player {
   padding: 0.35rem 0.6rem;
 }
 
+.c-player button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .c-player__run {
   background: #2da44e;
   border-color: #2a9145;
@@ -153,6 +168,18 @@ c-player {
 .c-player__reset {
   background: #ffffff;
   color: #24292f;
+}
+
+.c-player__badge {
+  background: #f2c94c;
+  border-radius: 999px;
+  color: #24292f;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.45rem;
+  vertical-align: middle;
 }
 
 .c-player__body {
