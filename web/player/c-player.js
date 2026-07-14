@@ -22,6 +22,30 @@ class CPlayer extends HTMLElement {
     const stdin = this.exercise.stdin || "";
     const runDisabled = this.browserRunnable ? "" : "disabled";
     const runnableLabel = this.browserRunnable ? "" : '<span class="c-player__badge">Local uniquement</span>';
+    const stdinBlock = this.browserRunnable
+      ? `
+            <label>
+              <strong class="c-player__field-title">
+                stdin
+                <span
+                  class="c-player__help"
+                  tabindex="0"
+                  title="Entree standard du programme : saisir ici les valeurs que le programme lirait au clavier. Separer les valeurs par des espaces ou des retours a la ligne, par exemple : 12 14"
+                >(?)</span>
+              </strong>
+              <textarea class="c-player__stdin" spellcheck="false">${this.escape(stdin)}</textarea>
+            </label>`
+      : "";
+    const outputBlock = this.browserRunnable
+      ? `
+          <div class="c-player__output">
+            <div class="c-player__panel c-player__panel--unified">
+              <strong>Sorties</strong>
+              <pre class="c-player__combined-output"></pre>
+            </div>
+          </div>`
+      : "";
+    const bodyClass = this.browserRunnable ? "c-player__body" : "c-player__body c-player__body--single";
     this.innerHTML = `
       <div class="c-player">
         <div class="c-player__bar">
@@ -34,30 +58,15 @@ class CPlayer extends HTMLElement {
         <div class="c-player__note">
           <span class="c-player__status">Initialisation du runtime...</span>
         </div>
-        <div class="c-player__body">
+        <div class="${bodyClass}">
           <div class="c-player__editor">
             <label>
               <strong>Starter code</strong>
               <textarea class="c-player__code" spellcheck="false" ${this.readonly ? "readonly" : ""}>${this.escape(this.initialCode)}</textarea>
             </label>
-            <label>
-              <strong class="c-player__field-title">
-                stdin
-                <span
-                  class="c-player__help"
-                  tabindex="0"
-                  title="Entree standard du programme : saisir ici les valeurs que le programme lirait au clavier. Separer les valeurs par des espaces ou des retours a la ligne, par exemple : 12 14"
-                >(?)</span>
-              </strong>
-              <textarea class="c-player__stdin" spellcheck="false">${this.escape(stdin)}</textarea>
-            </label>
+            ${stdinBlock}
           </div>
-          <div class="c-player__output">
-            <div class="c-player__panel c-player__panel--unified">
-              <strong>Sorties</strong>
-              <pre class="c-player__combined-output"></pre>
-            </div>
-          </div>
+          ${outputBlock}
         </div>
       </div>
     `;
@@ -68,7 +77,10 @@ class CPlayer extends HTMLElement {
 
   reset() {
     this.querySelector(".c-player__code").value = this.initialCode;
-    this.querySelector(".c-player__stdin").value = this.exercise.stdin || "";
+    const stdin = this.querySelector(".c-player__stdin");
+    if (stdin) {
+      stdin.value = this.exercise.stdin || "";
+    }
     this.clearOutputs();
   }
 
@@ -129,10 +141,16 @@ class CPlayer extends HTMLElement {
     const html = streams
       .flatMap(([origin, kind, value]) => this.formatStream(origin, kind, value))
       .join("");
-    this.querySelector(".c-player__combined-output").innerHTML = html;
+    const output = this.querySelector(".c-player__combined-output");
+    if (output) {
+      output.innerHTML = html;
+    }
   }
 
   clearOutputs() {
+    if (!this.querySelector(".c-player__combined-output")) {
+      return;
+    }
     this.show({});
   }
 

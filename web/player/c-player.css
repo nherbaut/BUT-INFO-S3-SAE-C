@@ -188,6 +188,10 @@ c-player {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.c-player__body--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .c-player__editor,
 .c-player__output {
   min-width: 0;
@@ -196,6 +200,10 @@ c-player {
 
 .c-player__editor {
   border-right: 1px solid #d0d7de;
+}
+
+.c-player__body--single .c-player__editor {
+  border-right: 0;
 }
 
 .c-player label {
