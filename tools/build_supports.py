@@ -1117,6 +1117,36 @@ def admin_page(flow_items, question_bank):
     </label>
   </div>
 
+  <section class="admin-mirror mb-4">
+    <div class="admin-mirror__preview card">
+      <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+          <div class="fw-semibold" data-preview-title>Parcours du cours</div>
+          <div class="text-body-secondary small" data-preview-subtitle>Selectionner une section ou une question.</div>
+        </div>
+        <div class="admin-mirror__nav">
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-flow-prev>Precedent</button>
+          <button class="btn btn-primary btn-sm" type="button" data-flow-current>Envoyer l'element courant</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-flow-next>Suivant</button>
+        </div>
+      </div>
+      <div class="admin-preview" data-admin-preview>
+        <div class="text-body-secondary">Le contenu du cours apparaitra ici.</div>
+      </div>
+    </div>
+    <aside class="admin-mirror__side">
+      <section class="card admin-chat">
+        <div class="card-header fw-semibold">Chat ntfy admin</div>
+        <div class="admin-chat__messages" data-admin-chat-messages></div>
+        <div class="card-body border-top">
+          <label class="form-label" for="admin-chat-input">Message au groupe</label>
+          <textarea class="form-control" id="admin-chat-input" data-admin-chat-input rows="3"></textarea>
+          <button class="btn btn-primary btn-sm mt-2" type="button" data-admin-chat-send>Envoyer</button>
+        </div>
+      </section>
+    </aside>
+  </section>
+
   <section class="card mb-4">
     <div class="card-header fw-semibold">Message libre</div>
     <div class="card-body">
@@ -1202,6 +1232,7 @@ def admin_page(flow_items, question_bank):
     S3C: "https://ntfy.home.nextnet.top/BUT-INFO-S3-S3C-SAE-C-admin",
   }};
   let responseSource = null;
+  let chatSource = null;
   let activeQuiz = readActiveQuiz();
   let activeFlowIndex = readActiveFlowIndex();
   const groupSelect = document.querySelector("[data-admin-group]");
@@ -1217,6 +1248,11 @@ def admin_page(flow_items, question_bank):
   const resultsSubtitle = document.querySelector("[data-results-subtitle]");
   const resultsBody = document.querySelector("[data-results-body]");
   const resultsActions = document.querySelector("[data-results-actions]");
+  const preview = document.querySelector("[data-admin-preview]");
+  const previewTitle = document.querySelector("[data-preview-title]");
+  const previewSubtitle = document.querySelector("[data-preview-subtitle]");
+  const chatMessages = document.querySelector("[data-admin-chat-messages]");
+  const chatInput = document.querySelector("[data-admin-chat-input]");
 
   function setStatus(kind, message) {{
     status.hidden = false;
@@ -1237,6 +1273,8 @@ def admin_page(flow_items, question_bank):
     appPanel.hidden = false;
     populateQuestions();
     connectResponses();
+    connectAdminChat();
+    renderPreview();
     renderStats();
   }}
 
@@ -1268,6 +1306,55 @@ def admin_page(flow_items, question_bank):
     return adminTopics[groupSelect.value];
   }}
 
+  function currentSseTopic() {{
+    return `${{currentTopic()}}/sse`;
+  }}
+
+  function currentFlowItem() {{
+    return activeFlowIndex === null ? null : flowItems[activeFlowIndex] || null;
+  }}
+
+  function nearestSectionIndex(index) {{
+    for (let cursor = index; cursor >= 0; cursor -= 1) {{
+      if (flowItems[cursor]?.type === "section") return cursor;
+    }}
+    return flowItems.findIndex((item) => item.type === "section");
+  }}
+
+  async function renderPreview() {{
+    const item = currentFlowItem();
+    if (!item) {{
+      preview.innerHTML = '<div class="text-body-secondary">Selectionner une section ou une question.</div>';
+      return;
+    }}
+    const sectionIndex = item.type === "section" ? activeFlowIndex : nearestSectionIndex(activeFlowIndex);
+    const section = flowItems[sectionIndex];
+    previewTitle.textContent = item.type === "question" ? `Question - ${{item.title}}` : item.title;
+    previewSubtitle.textContent = item.type === "question" ? `${{item.course_title}} - ${{item.quiz_title}}` : item.course_title;
+    if (!section?.href) {{
+      preview.innerHTML = '<div class="alert alert-warning mb-0">Aucune section associee a cette question.</div>';
+      return;
+    }}
+    try {{
+      const url = new URL(section.href, window.location.href);
+      const response = await fetch(url.pathname.split("/").pop());
+      if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
+      const documentText = await response.text();
+      const parsed = new DOMParser().parseFromString(documentText, "text/html");
+      const content = parsed.querySelector(".course-content") || parsed.querySelector("main") || parsed.body;
+      content.querySelectorAll("script, style, .ntfy-chat, .site-footer, nav, aside").forEach((node) => node.remove());
+      preview.innerHTML = content.innerHTML;
+      const anchor = section.href.split("#")[1];
+      if (anchor) {{
+        const escapedAnchor = window.CSS?.escape ? CSS.escape(anchor) : anchor.replaceAll('"', '\\"');
+        const target = preview.querySelector(`#${{escapedAnchor}}`);
+        if (target) target.scrollIntoView({{ block: "start" }});
+      }}
+    }} catch (error) {{
+      preview.innerHTML = `<div class="alert alert-danger mb-0">Impossible de charger la preview : ${{escape(error.message)}}</div>`;
+    }}
+  }}
+
   async function publish(message) {{
     const topic = currentTopic();
     if (!topic) {{
@@ -1286,6 +1373,35 @@ def admin_page(flow_items, question_bank):
     }} catch (error) {{
       setStatus("danger", `Echec de l'envoi : ${{error.message}}`);
     }}
+  }}
+
+  function appendAdminChat(message) {{
+    const entry = document.createElement("article");
+    entry.className = "admin-chat__message";
+    entry.textContent = message;
+    chatMessages.append(entry);
+    while (chatMessages.children.length > 80) {{
+      chatMessages.firstElementChild.remove();
+    }}
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }}
+
+  function connectAdminChat() {{
+    if (chatSource) chatSource.close();
+    if (!window.EventSource) {{
+      appendAdminChat("SSE indisponible.");
+      return;
+    }}
+    chatSource = new EventSource(currentSseTopic());
+    chatSource.onmessage = (event) => {{
+      try {{
+        const payload = JSON.parse(event.data);
+        if (payload.event === "message") appendAdminChat(payload.message || "");
+      }} catch (_error) {{
+        appendAdminChat(event.data);
+      }}
+    }};
+    chatSource.onerror = () => appendAdminChat("Connexion chat en attente de reconnexion.");
   }}
 
   function action(type, payload) {{
@@ -1338,6 +1454,7 @@ def admin_page(flow_items, question_bank):
       activeFlowIndex = flowIndex;
       localStorage.setItem(flowIndexKey, String(flowIndex));
     }}
+    renderPreview();
     activeQuiz = {{
       id: quizId,
       group: groupSelect.value,
@@ -1450,9 +1567,9 @@ def admin_page(flow_items, question_bank):
         <ol class="mb-0">${{podium || "<li>Aucune bonne reponse.</li>"}}</ol>
       `;
     }}
-    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username)).slice(0, 10);
+    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username));
     leaderboardBox.innerHTML = leaders.length
-      ? `<ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol>`
+      ? `<div class="admin-leaderboard-scroll"><ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol></div>`
       : "Aucune reponse recue.";
     if (!resultsModal.hidden) {{
       openResultsModal(resultsModal.dataset.mode || "responses");
@@ -1472,9 +1589,9 @@ def admin_page(flow_items, question_bank):
 
   function leaderboardHtml() {{
     const stats = readStats();
-    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username)).slice(0, 10);
+    const leaders = Object.values(stats.leaderboard || {{}}).sort((a, b) => b.score - a.score || a.username.localeCompare(b.username));
     return leaders.length
-      ? `<ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol>`
+      ? `<div class="admin-leaderboard-scroll"><ol class="mb-0">${{leaders.map((user) => `<li>${{escape(user.username)}} : ${{user.score}} / ${{user.answers}}</li>`).join("")}}</ol></div>`
       : "<p class=\\"mb-0 text-body-secondary\\">Aucune reponse recue.</p>";
   }}
 
@@ -1521,6 +1638,7 @@ def admin_page(flow_items, question_bank):
     }}
     activeFlowIndex = index;
     localStorage.setItem(flowIndexKey, String(index));
+    renderPreview();
     if (item.type === "section") {{
       const url = new URL(item.href, window.location.href);
       publish(url.href);
@@ -1539,6 +1657,18 @@ def admin_page(flow_items, question_bank):
       return;
     }}
     sendFlowItem(activeFlowIndex + 1);
+  }}
+
+  function sendPreviousFlowItem() {{
+    if (activeFlowIndex === null) {{
+      sendFlowItem(0);
+      return;
+    }}
+    sendFlowItem(Math.max(0, activeFlowIndex - 1));
+  }}
+
+  function sendCurrentFlowItem() {{
+    sendFlowItem(activeFlowIndex === null ? 0 : activeFlowIndex);
   }}
 
   function connectResponses() {{
@@ -1560,6 +1690,9 @@ def admin_page(flow_items, question_bank):
   }}
 
   document.querySelector("[data-close-results]").addEventListener("click", closeResultsModal);
+  document.querySelector("[data-flow-prev]").addEventListener("click", sendPreviousFlowItem);
+  document.querySelector("[data-flow-current]").addEventListener("click", sendCurrentFlowItem);
+  document.querySelector("[data-flow-next]").addEventListener("click", sendNextFlowItem);
 
   document.querySelectorAll("[data-flow-index]").forEach((button) => {{
     button.addEventListener("click", () => {{
@@ -1569,6 +1702,11 @@ def admin_page(flow_items, question_bank):
 
   document.querySelector("[data-send-text]").addEventListener("click", () => {{
     publish(messageInput.value);
+  }});
+
+  document.querySelector("[data-admin-chat-send]").addEventListener("click", () => {{
+    publish(chatInput.value);
+    chatInput.value = "";
   }});
 
   document.querySelector("[data-send-code]").addEventListener("click", () => {{
@@ -1589,7 +1727,10 @@ def admin_page(flow_items, question_bank):
     }}
   }});
 
-  groupSelect.addEventListener("change", connectResponses);
+  groupSelect.addEventListener("change", () => {{
+    connectResponses();
+    connectAdminChat();
+  }});
 
   if (sessionStorage.getItem(authKey) === "true") {{
     showApp();

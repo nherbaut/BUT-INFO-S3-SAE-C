@@ -676,6 +676,55 @@ quiz-player {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.admin-mirror {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+}
+
+.admin-mirror__preview,
+.admin-mirror__side {
+  min-width: 0;
+}
+
+.admin-mirror__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-preview {
+  max-height: calc(100vh - 13rem);
+  min-height: 30rem;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.admin-preview .page-actions,
+.admin-preview .ntfy-chat,
+.admin-preview .site-footer {
+  display: none;
+}
+
+.admin-chat__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 18rem;
+  min-height: 10rem;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.admin-chat__message {
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  padding: 0.5rem 0.65rem;
+  white-space: pre-wrap;
+}
+
 .admin-section {
   align-items: center;
   display: flex;
@@ -715,6 +764,12 @@ quiz-player {
   border-radius: 8px;
   min-height: 8rem;
   padding: 1rem;
+}
+
+.admin-leaderboard-scroll {
+  max-height: 8.75rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .admin-results-modal {
@@ -778,6 +833,10 @@ quiz-player {
 }
 
 @media (max-width: 900px) {
+  .admin-mirror {
+    grid-template-columns: 1fr;
+  }
+
   .c-player__body {
     grid-template-columns: 1fr;
   }
