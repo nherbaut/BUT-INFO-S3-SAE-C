@@ -216,9 +216,10 @@ def encode_data(value):
     return base64.b64encode(json.dumps(value, ensure_ascii=False).encode("utf-8")).decode("ascii")
 
 
-def render_html_quiz(quiz):
+def render_html_quiz(quiz, fold_validated=False):
     payload = encode_data(quiz)
-    return f'<quiz-player data-quiz-b64="{payload}"></quiz-player>'
+    folded = ' data-fold-validated="true"' if fold_validated else ""
+    return f'<quiz-player data-quiz-b64="{payload}"{folded}></quiz-player>'
 
 
 def render_pdf_quiz(quiz, show_answers=True):
@@ -359,6 +360,8 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
                 str(PLAYER_DST / "c-player.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "quiz-player.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "site-theme.js"),
                 "-o",
                 str(output_path),
             ]
@@ -410,6 +413,7 @@ def main_nav(active):
         {''.join(links)}
       </ul>
     </div>
+    <button class="btn btn-outline-light btn-sm ms-auto" type="button" data-theme-toggle aria-pressed="false">Mode sombre</button>
   </div>
 </nav>
 """
@@ -493,6 +497,9 @@ def landing_page():
   <title>BUT INFO S3 SAE-C</title>
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="player/c-player.css">
+  <script>
+    document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
+  </script>
 </head>
 <body class="landing-page">
 {main_nav("home")}
@@ -591,6 +598,7 @@ def landing_page():
   draw();
 }})();
 </script>
+{read_text(PLAYER_SRC / "site-theme.js")}
 </body>
 </html>
 """
@@ -633,7 +641,7 @@ def quiz_index_markdown(courses):
         lines.append(f"## {course['title']}")
         lines.append("")
         for quiz in quizzes:
-            lines.append(render_html_quiz(quiz))
+            lines.append(render_html_quiz(quiz, fold_validated=True))
             lines.append("")
     return "\n".join(lines)
 
@@ -643,7 +651,7 @@ def build_quiz_pdf(courses):
     for course in courses:
         quizzes = quizzes_from_source(read_text(course["path"]), course)
         for quiz in quizzes:
-            blocks.append(render_pdf_quiz(quiz))
+            blocks.append(render_pdf_quiz(quiz, show_answers=False))
             blocks.append("")
     run_pandoc("\n".join(blocks), BUILD / QUIZ_PDF, html_mode=False)
 

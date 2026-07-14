@@ -3,6 +3,8 @@ class QuizPlayer extends HTMLElement {
   connectedCallback() {
     this.quiz = this.parseQuiz();
     this.progress = this.readProgress();
+    this.shuffleRound = 0;
+    this.restartMode = false;
     this.render();
   }
 
@@ -15,15 +17,17 @@ class QuizPlayer extends HTMLElement {
   render() {
     const state = this.quizProgress();
     const validated = state.validated === true;
+    const foldValidated = this.dataset.foldValidated === "true";
+    const openAttribute = foldValidated && validated ? "" : " open";
     this.innerHTML = `
-      <section class="quiz-player card my-4" data-quiz-id="${this.escape(this.quiz.id)}">
-        <div class="quiz-player__header card-header">
+      <details class="quiz-player card my-4" data-quiz-id="${this.escape(this.quiz.id)}"${openAttribute}>
+        <summary class="quiz-player__header card-header">
           <div>
             <h2 class="quiz-player__title h5">${this.escape(this.quiz.title)}</h2>
             ${this.quiz.description ? `<p class="quiz-player__description">${this.escape(this.quiz.description)}</p>` : ""}
           </div>
           <span class="quiz-player__badge badge ${validated ? "text-bg-success" : "text-bg-secondary"}">${validated ? "Valide" : "A faire"}</span>
-        </div>
+        </summary>
         <div class="card-body">
           ${this.quiz.questions.map((question, index) => this.renderQuestion(question, index)).join("")}
           <div class="quiz-player__actions">
@@ -32,14 +36,14 @@ class QuizPlayer extends HTMLElement {
           </div>
           <div class="quiz-player__feedback mt-3" aria-live="polite"></div>
         </div>
-      </section>
+      </details>
     `;
     this.querySelector(".quiz-player__validate").addEventListener("click", () => this.validate());
     this.querySelector(".quiz-player__hint").addEventListener("click", () => this.showHints());
   }
 
   renderQuestion(question, index) {
-    const options = this.shuffle(question.options, `${this.quiz.id}:${question.id}`);
+    const options = this.shuffle(question.options, `${this.quiz.id}:${question.id}:${this.shuffleRound}`);
     return `
       <fieldset class="quiz-player__question" data-question-id="${this.escape(question.id)}">
         <legend class="quiz-player__question-title">${index + 1}. ${this.escape(question.title)}</legend>
@@ -62,10 +66,13 @@ class QuizPlayer extends HTMLElement {
   }
 
   validate() {
+    if (this.restartMode) {
+      this.restart();
+      return;
+    }
+
     const quizState = this.quizProgress();
     let allCorrect = true;
-    let firstWrongAttempt = false;
-    let secondWrongAttempt = false;
 
     for (const question of this.quiz.questions) {
       const fieldset = this.querySelector(`[data-question-id="${this.escapeSelector(question.id)}"]`);
@@ -79,8 +86,6 @@ class QuizPlayer extends HTMLElement {
         questionState.validated = false;
         questionState.attempts += 1;
         allCorrect = false;
-        firstWrongAttempt = firstWrongAttempt || questionState.attempts === 1;
-        secondWrongAttempt = secondWrongAttempt || questionState.attempts >= 2;
       }
       quizState.questions[question.id] = questionState;
       this.renderQuestionFeedback(fieldset, question, questionState, correct);
@@ -97,17 +102,24 @@ class QuizPlayer extends HTMLElement {
     if (allCorrect) {
       this.setFeedback("Bonne reponse. Quiz valide.", "success");
       this.setValidateClass("btn-success");
+      this.querySelector(".quiz-player__validate").textContent = "Valider";
       this.querySelector(".quiz-player__hint").classList.add("d-none");
-    } else if (secondWrongAttempt) {
-      this.setFeedback("Les bonnes reponses sont affichees.", "danger");
-      this.setValidateClass("btn-danger");
-      this.querySelector(".quiz-player__hint").classList.add("d-none");
-      this.showAnswers();
-    } else if (firstWrongAttempt) {
-      this.setFeedback("Il manque au moins une bonne reponse.", "warning");
+      if (this.dataset.foldValidated === "true") {
+        this.querySelector(".quiz-player").open = false;
+      }
+    } else {
+      this.restartMode = true;
+      this.setFeedback("Il manque au moins une bonne reponse. Recommencer le quiz pour retenter.", "warning");
       this.setValidateClass("btn-warning");
+      this.querySelector(".quiz-player__validate").textContent = "Recommencer";
       this.toggleHintButton();
     }
+  }
+
+  restart() {
+    this.shuffleRound += 1;
+    this.restartMode = false;
+    this.render();
   }
 
   renderQuestionFeedback(fieldset, question, state, correct) {
