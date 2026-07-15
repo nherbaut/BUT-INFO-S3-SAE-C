@@ -382,16 +382,20 @@ def write_starter_zip(output_path, exercises):
             archive.write(common, common.relative_to(ROOT))
         for exercise in exercises:
             exercise_dir = ROOT / exercise["path"]
-            entries = ["exercise.json", "Makefile", *exercise.get("sources", [])]
-            for entry in entries:
-                file_path = exercise_dir / entry
-                if not file_path.exists() or not file_path.is_file():
-                    continue
+            entries = []
+            for name in ["exercise.json", "Makefile", "README.md", ".gitignore"]:
+                path = exercise_dir / name
+                if path.exists() and path.is_file():
+                    entries.append(path)
+            for directory in ["src", "include", "tests"]:
+                path = exercise_dir / directory
+                if path.exists() and path.is_dir():
+                    entries.extend(sorted(file for file in path.rglob("*") if file.is_file()))
+            for file_path in entries:
                 arcname = str(file_path.relative_to(ROOT))
-                if arcname in seen:
-                    continue
-                seen.add(arcname)
-                archive.write(file_path, arcname)
+                if arcname not in seen:
+                    seen.add(arcname)
+                    archive.write(file_path, arcname)
 
 
 def render_pdf_block(kind, path_text):
@@ -655,7 +659,7 @@ def landing_page():
       <h1 class="landing-hero__title">BUT INFO S3 SAE-C</h1>
       <p class="landing-hero__lead">Supports de cours, exercices interactifs et PDF pour demarrer le C avant la programmation systeme.</p>
       <div class="d-flex flex-wrap gap-3 mt-4">
-        <a class="btn btn-primary btn-lg" href="{COURSE_INDEX}">Ouvrir le site statique</a>
+        <a class="btn btn-primary btn-lg" href="{COURSE_INDEX}">Voir le cours</a>
         <a class="btn btn-primary btn-lg" href="{PUBLIC_REPO}">Cloner le depot</a>
         <a class="btn btn-secondary btn-lg" href="{FULL_PDF}" download>Telecharger le PDF</a>
       </div>

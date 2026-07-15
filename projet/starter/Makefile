@@ -1,41 +1,63 @@
-CC ?= gcc
-CFLAGS ?= -std=c11 -Wall -Wextra -pedantic -g
+CC ?= cc
+CPPFLAGS ?= -Iinclude
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic
+LDFLAGS ?=
+LDLIBS ?=
+
 VALGRIND ?= valgrind
-VALGRIND_FLAGS ?= --leak-check=full --error-exitcode=1
+VALGRIND_FLAGS ?= \
+	--leak-check=full \
+	--show-leak-kinds=all \
+	--errors-for-leak-kinds=definite,indirect,possible \
+	--track-origins=yes \
+	--error-exitcode=1
 
-APP := carnet
-TEST_APP := test_carnet
-OBJS := src/carnet.o
+ARGS ?=
+SCENARIO_ARGS ?=
 
-.PHONY: all run test memcheck clean
+BUILD_DIR := build
+PROGRAM := $(BUILD_DIR)/carnet
+TEST_PROGRAM := $(BUILD_DIR)/test_carnet
+OBJS := $(BUILD_DIR)/carnet.o
 
-all: $(APP) $(TEST_APP)
+.PHONY: all test memcheck memcheck-tests memcheck-run memcheck-scenario clean run
 
-$(APP): src/main.o $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+all: $(PROGRAM)
 
-$(TEST_APP): tests/test_carnet.o $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+$(BUILD_DIR):
+	mkdir -p $@
 
-src/main.o: src/main.c src/carnet.h
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/main.o: src/main.c include/projet/carnet.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-src/carnet.o: src/carnet.c src/carnet.h
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/carnet.o: src/carnet.c include/projet/carnet.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-tests/test_carnet.o: tests/test_carnet.c src/carnet.h
-	$(CC) $(CFLAGS) -Isrc -c $< -o $@
+$(BUILD_DIR)/test_carnet.o: tests/test_carnet.c include/projet/carnet.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-run: $(APP)
-	./$(APP)
+$(PROGRAM): $(BUILD_DIR)/main.o $(OBJS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-test: $(TEST_APP)
-	./$(TEST_APP)
+$(TEST_PROGRAM): $(BUILD_DIR)/test_carnet.o $(OBJS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-memcheck: $(APP) $(TEST_APP)
-	$(VALGRIND) $(VALGRIND_FLAGS) ./$(APP)
-	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_APP)
+run: $(PROGRAM)
+	./$(PROGRAM)
+
+test: $(TEST_PROGRAM)
+	./$(TEST_PROGRAM)
+
+memcheck: memcheck-tests
+
+memcheck-tests: $(TEST_PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_PROGRAM)
+
+memcheck-run: $(PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
+
+memcheck-scenario: $(PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
 
 clean:
-	rm -f $(APP) $(TEST_APP) src/*.o tests/*.o
-
+	rm -rf $(BUILD_DIR)

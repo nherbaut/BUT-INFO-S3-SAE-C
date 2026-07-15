@@ -16,8 +16,8 @@ ARGS ?=
 SCENARIO_ARGS ?=
 
 BUILD_DIR := build
-PROGRAM := $(BUILD_DIR)/etudiants
-OBJS := $(BUILD_DIR)/main.o $(BUILD_DIR)/etudiant.o
+PROGRAM := $(BUILD_DIR)/projet-cli
+TEST_PROGRAM := $(BUILD_DIR)/test-greet
 
 .PHONY: all test memcheck memcheck-tests memcheck-run memcheck-scenario clean run
 
@@ -26,29 +26,33 @@ all: $(PROGRAM)
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/main.o: src/main.c include/projet/etudiant.h | $(BUILD_DIR)
+$(BUILD_DIR)/greet.o: src/greet.c include/projet/greet.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/etudiant.o: src/etudiant.c include/projet/etudiant.h | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-$(PROGRAM): $(OBJS) | $(BUILD_DIR)
+$(PROGRAM): src/main.c $(BUILD_DIR)/greet.o | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-run: $(PROGRAM)
-	./$(PROGRAM)
+$(TEST_PROGRAM): tests/test_greet.c $(BUILD_DIR)/greet.o | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-test: $(PROGRAM)
-	./$(PROGRAM) | grep -q "Ada: 15.50"
+test: $(TEST_PROGRAM)
+	./$(TEST_PROGRAM)
 
+run:
+	$(PROGRAM)
+
+# Convention : "memcheck" valide la mémoire pendant les tests unitaires.
 memcheck: memcheck-tests
 
-memcheck-tests: $(PROGRAM)
-	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM)
+memcheck-tests: $(TEST_PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_PROGRAM)
 
+# Exécution normale sous Valgrind, avec arguments fournis par l'utilisateur.
+# Exemple : make memcheck-run ARGS="arg1 arg2"
 memcheck-run: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
 
+# Scénario fixe, reproductible et adapté à l'intégration continue.
 memcheck-scenario: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
 

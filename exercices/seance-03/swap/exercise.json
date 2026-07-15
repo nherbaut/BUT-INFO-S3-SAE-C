@@ -2,8 +2,8 @@
   "id": "seance-03-swap",
   "title": "Swap par valeur et par pointeur",
   "statement": "Comparer un echange impossible par copie de valeurs et un echange possible via copies d'adresses.",
-  "sources": ["main.c"],
-  "main": "main.c",
+  "sources": ["src/main.c"],
+  "main": "src/main.c",
   "stdin": "",
   "expected_stdout": "apres swap_val: a=1 b=2\napres swap_ptr: a=2 b=1\n",
   "expected_stderr": "",
@@ -13,4 +13,3 @@
     "test": "make test"
   }
 }
-

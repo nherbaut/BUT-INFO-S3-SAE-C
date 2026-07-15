@@ -2,8 +2,8 @@
   "id": "seance-02-compilation-separee",
   "title": "Compilation separee",
   "statement": "Separer le programme en un fichier principal, une implementation et un header.",
-  "sources": ["main.c", "stats.c", "stats.h"],
-  "main": "main.c",
+  "sources": ["src/main.c", "src/stats.c", "include/projet/stats.h"],
+  "main": "src/main.c",
   "stdin": "",
   "expected_stdout": "moyenne = 12.00\nmax = 14\n",
   "expected_stderr": "",
@@ -13,4 +13,3 @@
     "test": "make test"
   }
 }
-

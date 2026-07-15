@@ -1,21 +1,49 @@
-include ../../common.mk
+CC ?= cc
+CPPFLAGS ?= -Iinclude
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic
+LDFLAGS ?=
+LDLIBS ?=
 
-TARGET := swap
+VALGRIND ?= valgrind
+VALGRIND_FLAGS ?= \
+	--leak-check=full \
+	--show-leak-kinds=all \
+	--errors-for-leak-kinds=definite,indirect,possible \
+	--track-origins=yes \
+	--error-exitcode=1
 
-all: $(TARGET)
+ARGS ?=
+SCENARIO_ARGS ?=
 
-$(TARGET): main.c
-	$(CC) $(CFLAGS) $< -o $@
+BUILD_DIR := build
+PROGRAM := $(BUILD_DIR)/swap
 
-run: $(TARGET)
-	./$(TARGET)
+.PHONY: all test memcheck memcheck-tests memcheck-run memcheck-scenario clean run
 
-test: $(TARGET)
-	./$(TARGET) | grep -q "apres swap_ptr: a=2 b=1"
+all: $(PROGRAM)
 
-memcheck: $(TARGET)
-	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TARGET)
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(PROGRAM): src/main.c | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $< $(LDLIBS) -o $@
+
+run: $(PROGRAM)
+	./$(PROGRAM)
+
+test: $(PROGRAM)
+	./$(PROGRAM) | grep -q "apres swap_ptr: a=2 b=1"
+
+memcheck: memcheck-tests
+
+memcheck-tests: $(PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM)
+
+memcheck-run: $(PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
+
+memcheck-scenario: $(PROGRAM)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
 
 clean:
-	rm -f $(TARGET)
-
+	rm -rf $(BUILD_DIR)
