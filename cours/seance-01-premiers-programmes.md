@@ -67,10 +67,15 @@ lancement du programme.
 #include <stdio.h>
 #include <stdlib.h>
 
+// pour la compilation dans le navigateur
+#ifndef EXIT_SUCCESS
+  #define EXIT_SUCCESS 0
+#endif
+
 int main(void)
 {
     printf("Hello World!\n");
-    return 0;
+    return EXIT_SUCCESS;
 }
 ```
 
@@ -146,14 +151,14 @@ gcc -std=c11 -Wall -Wextra -pedantic -g hello.c -o hello
 ./hello
 ```
 
-`gcc` transforme le fichier source `hello.c` en executable. Les options activent
-un dialecte C precise et des avertissements utiles.
+`gcc` transforme le fichier source `hello.c` en exécutable. Les options activent
+un dialecte C précisé et des avertissements utiles.
 
 ## Variables et types simples
 
 Une variable C contient directement une valeur du type annonce. Pour un premier
 programme, on peut raisonner comme en Java sur les entiers, les conditions et les
-boucles, mais il faut garder en tete que C fait peu de controles automatiques.
+boucles, mais il faut garder en tête que C fait peu de contrôles automatiques.
 
 ```c
 int note = 12;
@@ -164,8 +169,8 @@ if (note >= seuil) {
 }
 ```
 
-Le type `int` represente un entier. La variable `note` contient ici la valeur
-`12`, pas une reference vers un objet.
+Le type `int` représente un entier. La variable `note` contient ici la valeur
+`12`, pas une référence vers un objet.
 
 ::: quiz {#quiz-s1-types}
 title: Types et variables
@@ -174,16 +179,16 @@ title: Types et variables
 title: Que stocke une variable `int` ?
 description: On declare `int note = 12;`.
 
-- [x] Une valeur entiere copiee dans la variable
-- [ ] Une reference vers un objet Java
+- [x] Une valeur entière copiée dans la variable
+- [ ] Une référence vers un objet Java
   hint: En C, une variable simple contient directement sa valeur.
-- [ ] Une chaine de caracteres
+- [ ] Une chaine de caractères
 :::
 :::
 
 ## Conditions
 
-Les conditions ressemblent a Java sur la syntaxe de base.
+Les conditions ressemblent à Java sur la syntaxe de base.
 
 ```c
 if (a > b) {
@@ -193,7 +198,7 @@ if (a > b) {
 }
 ```
 
-L'exercice suivant demande d'identifier un maximum. Il sert a verifier les
+L'exercice suivant demande d'identifier un maximum. Il sert à vérifier les
 conditions, les variables et l'affichage.
 
 {{ c_exercise: exercices/seance-01/max3 }}
@@ -214,9 +219,9 @@ importante pour les tableaux : le premier indice est `0`.
 
 ## Tableaux simples
 
-Du point de vue algorithmique, un tableau est une collection de donnees du meme
+Du point de vue algorithmique, un tableau est une collection de données du même
 type, accessibles par un indice entier. En C, un tableau est aussi une zone
-memoire contenant des elements consecutifs.
+mémoire contenant des éléments consécutifs.
 
 ```c
 int notes[3] = {12, 14, 9};
@@ -235,32 +240,32 @@ for (i = 0; i < 3; i++) {
 printf("somme = %d\n", somme);
 ```
 
-Pour cette seance, on retient surtout :
+Pour cette séance, on retient surtout :
 
-- tous les elements d'un tableau ont le meme type ;
-- l'indice du premier element est `0` ;
-- la taille indiquee dans une declaration reserve de la place ;
-- acceder hors des bornes est une erreur que C ne detecte pas toujours.
+- tous les éléments d'un tableau ont le même type ;
+- l'indice du premier élément est `0` ;
+- la taille indiquée dans une déclaration réserve de la place ;
+- accéder hors des bornes est une erreur que C ne détecte pas toujours.
 
 ::: quiz {#quiz-s1-tableaux}
 title: Tableaux simples
 
 ::: question {#q-s1-indices-tableau}
-title: Quelles affirmations decrivent un tableau C simple ?
+title: Quelles affirmations décrivent un tableau C simple ?
 description: On declare `int notes[3] = {12, 14, 9};`.
 
-- [x] Le premier element est `notes[0]`
-- [x] Le tableau contient des elements de meme type
-- [ ] `notes[3]` designe le troisieme element
-  hint: Avec trois elements, les indices valides sont 0, 1 et 2.
-- [x] La declaration reserve de la place pour trois entiers
+- [x] Le premier élément est `notes[0]`
+- [x] Le tableau contient des éléments de même type
+- [ ] `notes[3]` désigne le troisième élément
+  hint: Avec trois éléments, les indices valides sont 0, 1 et 2.
+- [x] La déclaration réserve de la place pour trois entiers
 :::
 :::
 
-## Tester par entrees/sorties attendues
+## Tester par entrées/sorties attendues
 
-Au debut du cours, les tests peuvent rester simples : on donne des valeurs en
-entree standard et on compare la sortie produite a une sortie attendue.
+Au début du cours, les tests peuvent rester simples : on donne des valeurs en
+entrée standard et on compare la sortie produite à une sortie attendue.
 
 Exemple de commande locale :
 
@@ -268,25 +273,25 @@ Exemple de commande locale :
 printf "12 14\n" | ./moyenne
 ```
 
-Le programme lit les valeurs comme si elles avaient ete tapees au clavier.
+Le programme lit les valeurs comme si elles avaient été tapées au clavier.
 
 ## Executer dans le navigateur
 
-Le player integre a la page compile et execute des programmes courts. Il ne
-remplace pas GCC/Clang, mais il suffit pour manipuler les premieres notions sans
-installer l'outillage pendant la seance 1.
+Le player intègre a la page compile et exécute des programmes courts. Il ne
+remplace pas GCC/Clang, mais il suffit pour manipuler les premières notions sans
+installer l'outillage pendant la séance 1.
 
 Pour chaque exercice :
 
 - lire le code ;
-- modifier une partie limitee ;
+- modifier une partie limitée ;
 - lancer `Build & Run` ;
 - observer les sorties du compilateur et du programme.
 
-## Retrouver l'exercice dans le depot local
+## Retrouver l'exercice dans le dépôt local
 
-Les memes exercices existent dans le depot. Quand l'environnement local est
-utilise, les commandes deviennent :
+Les mêmes exercices existent dans le dépôt. Quand l'environnement local est
+utilisé, les commandes deviennent :
 
 ```bash
 cd exercices/seance-01/moyenne
@@ -294,25 +299,25 @@ make run
 make test
 ```
 
-La prise en main detaillee de `gcc`, des Makefiles et de l'organisation des
-fichiers est l'objectif de la seance 2.
+La prise en main détaillée de `gcc`, des Makefiles et de l'organisation des
+fichiers est l'objectif de la séance 2.
 
-## Presentation rapide du projet
+## Présentation rapide du projet
 
 - Theme general.
 - Livrables.
-- Jalons non encadres.
-- Evaluation individuelle finale.
+- Jalons non encadrés.
+- Évaluation individuelle finale.
 
-Le projet n'est pas developpable entierement des la seance 1. Le travail non
-encadre peut deja porter sur la lecture du sujet, les specifications, les cas de
-test attendus et la comprehension de l'organisation du depot.
+Le projet n'est pas développable entièrement des la séance 1. Le travail non
+encadre peut déjà porter sur la lecture du sujet, les spécifications, les cas de
+test attendus et la compréhension de l'organisation du dépôt.
 
-## Exercices proposes
+## Exercices propose
 
 - Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
 - Calcul de moyenne.
 - Maximum de trois entiers.
 - Comptage des notes superieures a 10.
-- Somme des elements d'un tableau d'entiers.
+- Somme des éléments d'un tableau d'entiers.
 - Table de multiplication.
