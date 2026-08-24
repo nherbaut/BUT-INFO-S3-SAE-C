@@ -3,10 +3,19 @@
 Ossature de cours C pour des etudiants de BUT2 qui suivront ensuite un cours
 de programmation systeme.
 
-Le depot est volontairement leger : il fournit les grandes lignes des seances,
-quelques exercices C representatifs, une structure de projet, et des Makefiles
-fonctionnels. Les explications detaillees sont a completer par l'equipe
+Le depot est volontairement leger : il fournit les grandes lignes des séances,
+quelques exercices C représentatifs, une structure de projet, et des Makefiles
+fonctionnels. Les explications détaillées sont a compléter par l'equipe
 enseignante.
+
+# Planning
+
+ - Semaine 38 (14/09/2026) : 2 séances de 2h encadrées (4h) et 1 séance 2 de 2h non encadrée
+ - Semaine 39 (21/09/2026) : 2 séances de 2h encadrées (4h) et 1 séance 2 de 2h non encadrée
+ - Semaine 40 (28/09/2026) : 1 séance de 2h encadrée (2h) et 1 séance 2 de 2h non encadrée  
+ - Semaine 50 (07/12/2026) : 2 séances de 2h non encadrées (4h)
+
+Soit 5 séances encadrées et 5 séances non encadrées.
 
 ## Prerequis etudiants
 
@@ -26,9 +35,9 @@ make memcheck
 make clean
 ```
 
-Les exercices de la seance 1 sont aussi concus pour etre copies dans Compiler
-Explorer. Les exemples de pointeurs de la seance 3 peuvent etre visualises avec
-Python Tutor C.
+Les exercices de la seance 1 sont aussi conçus pour etre copies dans [Compiler
+Explorer](https://godbolt.org/). Les exemples de pointeurs de la seance 3 peuvent etre visualises avec
+[Python Tutor C](https://pythontutor.com/c.html#).
 
 ## Arborescence
 
