@@ -2,7 +2,7 @@
 
 ## Objectifs
 
-- Situer le langage C dans la programmation systeme.
+- Situer le langage C dans la programmation système.
 - Lire et expliquer un programme C minimal.
 - Compiler et executer un programme court dans le navigateur.
 - Retrouver le meme exercice dans le depot local.
@@ -11,49 +11,50 @@
 
 ## Pourquoi programmer en C ?
 
-Ce cours prepare la programmation systeme. La programmation d'application vise
-souvent a construire des logiciels directement utiles aux utilisateurs. La
-programmation systeme construit plutot les outils, bibliotheques et interfaces
-utilises par d'autres programmes.
+Ce cours prepare la programmation système. La **programmation d'application** vise
+souvent a construire des **logiciels** directement **utiles aux utilisateurs**. La
+**programmation système construit** plutôt les **outils**, **bibliothèques** et **interfaces**
+utilisées par d'autres programmes.
 
-Une bibliotheque expose une interface de programmation, ou API : une liste de
+Une bibliothèque expose une interface de programmation, ou API : une liste de
 fonctions, types et constantes que le programmeur peut appeler. L'API UNIX est
-historiquement concue pour etre utilisee en C. Comprendre le C aide donc a lire
-la documentation systeme, a appeler les fonctions du systeme et a comprendre ce
+historiquement conçue pour être utilisée en C. Comprendre le C aide donc a lire
+la documentation système, a appeler les fonctions du système et a comprendre ce
 qui se passe sous les abstractions plus haut niveau.
 
 Le C est aussi un langage proche de la machine : les valeurs, les adresses, les
-zones memoire et les fichiers y sont manipules explicitement. Cette proximite
-est une contrainte, mais aussi un outil pour former un modele mental solide de
+zones mémoire et les fichiers y sont manipules explicitement. Cette proximité
+est une contrainte, mais aussi un outil pour former un modèle mental solide de
 l'execution d'un programme.
+L'absence d'abstraction contrairement aux languages de plus haut niveau permet d'obtenir des programmes plus économes en mémoire, énergie et plus rapides d'exécution au détriment d'une gymnastique intellectuelle plus complexe.
 
-## Reperes historiques
+## Repères historiques
 
-Le langage C apparait au debut des annees 1970, dans le contexte du systeme
+Le langage C apparait au debut des années 1970, dans le contexte du système
 UNIX, avec Dennis Ritchie et Ken Thompson. Il est influence par BCPL et B, puis
 popularise par le livre *The C Programming Language* de Brian Kernighan et
 Dennis Ritchie.
 
-Quelques reperes suffisent pour ce cours :
+Quelques repères suffisent pour ce cours :
 
-- 1972 : developpement de C avec UNIX.
+- 1972 : développement de C avec UNIX.
 - 1978 : publication du livre K&R.
-- 1989 : standard ANSI C, souvent appele C89.
+- 1989 : standard ANSI C, souvent appelé C89.
 - 1990 : standard ISO C90.
 - 1999 : C99.
 - 2011 : C11, la base retenue dans nos options de compilation.
 
 ::: quiz {#quiz-s1-histoire}
-title: Reperes C et UNIX
+title: Repères C et UNIX
 
-::: question {#q-s1-c-systeme}
-title: Pourquoi le C est-il utile avant la programmation systeme ?
-description: On cherche surtout le lien avec les API systeme.
+::: question {#q-s1-c-système}
+title: Pourquoi le C est-il utile avant la programmation système ?
+description: On cherche surtout le lien avec les API système.
 
-- [x] Parce que l'API UNIX est historiquement exposee en C
-- [ ] Parce que le C cache toujours la memoire au programmeur
-  hint: Au contraire, le C rend beaucoup de manipulations memoire explicites.
-- [x] Parce qu'il aide a comprendre les appels de bibliotheques bas niveau
+- [x] Parce que l'API UNIX est historiquement exposée en C
+- [ ] Parce que le C cache toujours la mémoire au programmeur
+  hint: Au contraire, le C rend beaucoup de manipulations mémoire explicites.
+- [x] Parce qu'il aide a comprendre les appels de bibliothèques bas niveau
 - [ ] Parce que C est une variante de Java
 :::
 :::
@@ -81,28 +82,28 @@ int main(void)
 
 Ce programme :
 
-- inclut des declarations fournies par des fichiers d'en-tete ;
+- inclut des declarations fournies par des fichiers d'en-tête ;
 - appelle `printf` pour afficher sur la sortie standard ;
 - termine la ligne avec `\n` ;
-- retourne un code de fin d'execution au systeme.
+- retourne un code de fin d'execution au système.
 
-La forme `int main(void)` indique que `main` ne recoit aucun argument et retourne
+La forme `int main(void)` indique que `main` ne reçoit aucun argument et retourne
 un entier. Par convention, ce code de retour indique si le programme s'est termine
 correctement. `EXIT_SUCCESS`, defini dans `stdlib.h`, exprime une terminaison
 reussie.
 
-## Fichiers d'en-tete
+## Fichiers d'en-tête
 
-Un fichier d'en-tete, ou header, contient des declarations necessaires au
-compilateur. Il ne contient pas forcement le code complet de la fonction appelee,
+Un fichier d'en-tête, ou header, contient des declarations nécessaires au
+compilateur. Il ne contient pas forcement le code complet de la fonction appelée,
 mais il annonce son existence et sa forme.
 
 Dans l'exemple precedent :
 
-- `#include <stdio.h>` donne acces a la declaration de `printf` ;
-- `#include <stdlib.h>` donne acces a `EXIT_SUCCESS` ;
-- les chevrons `<...>` designent un header fourni par le systeme ou la
-  bibliotheque standard.
+- `#include <stdio.h>` donne accès a la declaration de `printf` ;
+- `#include <stdlib.h>` donne accès a `EXIT_SUCCESS` ;
+- les chevrons `<...>` désignent un header fourni par le système ou la
+  bibliothèque standard.
 
 Cette distinction entre declaration et definition deviendra essentielle avec la
 compilation separee en seance 2.
@@ -118,7 +119,7 @@ printf("Bonjour\n");
 
 L'affichage produit par `printf` n'est pas le code de retour du programme. Le
 code de retour est la valeur renvoyee par `return` dans `main`. Les deux notions
-sont visibles par le systeme, mais elles ne servent pas au meme usage.
+sont visibles par le système, mais elles ne servent pas au meme usage.
 
 {{ c_demo: exercices/seance-01/moyenne }}
 
@@ -139,12 +140,12 @@ description: On considere le programme `hello.c` minimal.
 
 ## Compiler et executer
 
-Pendant cette premiere seance, les exercices peuvent etre lances dans le
+Pendant cette premiere seance, les exercices peuvent être lances dans le
 navigateur. Cela permet de se concentrer d'abord sur le langage : variables,
 conditions, boucles et affichage.
 
-La commande locale complete sera reprise en seance 2. Retenir seulement l'idee
-generale :
+La commande locale complete sera reprise en seance 2. Retenir seulement l'idée
+générale pour un programme simple :
 
 ```bash
 gcc -std=c11 -Wall -Wextra -pedantic -g hello.c -o hello
@@ -159,6 +160,8 @@ un dialecte C précisé et des avertissements utiles.
 Une variable C contient directement une valeur du type annonce. Pour un premier
 programme, on peut raisonner comme en Java sur les entiers, les conditions et les
 boucles, mais il faut garder en tête que C fait peu de contrôles automatiques.
+
+**Attention** les exemples sont donnés sans le contexte complet du programme. En C, contrairement au python, le code doit être impérativement dans une fonction.
 
 ```c
 int note = 12;
@@ -277,7 +280,7 @@ Le programme lit les valeurs comme si elles avaient été tapées au clavier.
 
 ## Executer dans le navigateur
 
-Le player intègre a la page compile et exécute des programmes courts. Il ne
+Le système intégré à la page compile et exécute des programmes courts. Il ne
 remplace pas GCC/Clang, mais il suffit pour manipuler les premières notions sans
 installer l'outillage pendant la séance 1.
 
@@ -318,6 +321,6 @@ test attendus et la compréhension de l'organisation du dépôt.
 - Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
 - Calcul de moyenne.
 - Maximum de trois entiers.
-- Comptage des notes superieures a 10.
+- Comptage des notes supérieures a 10.
 - Somme des éléments d'un tableau d'entiers.
 - Table de multiplication.
