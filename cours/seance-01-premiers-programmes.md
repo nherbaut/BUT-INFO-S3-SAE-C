@@ -106,7 +106,7 @@ Dans l'exemple precedent :
   bibliothèque standard.
 
 Cette distinction entre declaration et definition deviendra essentielle avec la
-compilation separee en seance 2.
+compilation séparée en seance 2.
 
 ## Afficher avec `printf`
 
