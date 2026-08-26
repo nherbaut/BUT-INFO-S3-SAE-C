@@ -1,4 +1,5 @@
 EXERCISES := \
+	exercices/seance-01/bonjour \
 	exercices/seance-01/moyenne \
 	exercices/seance-01/max3 \
 	exercices/seance-02/compilation-separee \
@@ -9,8 +10,10 @@ EXERCISES := \
 PROJECT := projet/starter
 COURSES := $(wildcard cours/*.md)
 BUILD_DIR := build/supports
+PORT ?= 8000
+C_REPL_IMAGE ?= c-repl
 
-.PHONY: all run test memcheck clean supports check-runtime $(EXERCISES) $(PROJECT)
+.PHONY: all run test memcheck clean supports serve c check-runtime $(EXERCISES) $(PROJECT)
 
 all: $(EXERCISES) $(PROJECT)
 
@@ -31,6 +34,13 @@ memcheck:
 
 supports: $(COURSES)
 	python3 tools/build_supports.py
+
+serve: supports
+	@printf "Site local: http://localhost:%s/\n" "$(PORT)"
+	python3 -m http.server $(PORT) --directory $(BUILD_DIR)
+
+c:
+	docker run --rm -it $(C_REPL_IMAGE)
 
 check-runtime:
 	python3 tools/check_runtime.py

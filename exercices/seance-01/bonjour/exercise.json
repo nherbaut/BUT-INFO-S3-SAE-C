@@ -1,0 +1,15 @@
+{
+  "id": "seance-01-bonjour",
+  "title": "Afficher Bonjour",
+  "statement": "Modifier le texte affiche par printf, puis executer le programme.",
+  "sources": ["src/main.c"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "Bonjour\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

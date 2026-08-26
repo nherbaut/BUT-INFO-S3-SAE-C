@@ -1,6 +1,6 @@
 # Projet C11 minimal
 
-Exemple minimal sans bibliothèque externe, comprenant :
+Exemple minimal, comprenant :
 
 - un module `greet` avec un en-tête public ;
 - un exécutable `projet-cli` ;
@@ -82,12 +82,6 @@ Les options par défaut sont :
 
 Les catégories `definite`, `indirect` et `possible` font échouer la cible. Les blocs `still reachable` restent affichés sans provoquer d'échec.
 
-Les options peuvent être remplacées à l'appel :
-
-```sh
-make memcheck-tests \
-    VALGRIND_FLAGS="--leak-check=full --error-exitcode=42"
-```
 
 ## Cibles principales
 
@@ -100,8 +94,3 @@ make memcheck-tests \
 | `make memcheck-scenario` | Exécute un scénario Valgrind reproductible. |
 | `make clean` | Supprime le répertoire `build/`. |
 
-## Nettoyage
-
-```sh
-make clean
-```

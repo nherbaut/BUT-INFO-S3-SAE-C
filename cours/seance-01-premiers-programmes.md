@@ -113,9 +113,7 @@ compilation separee en seance 2.
 `printf` ecrit du texte sur la sortie standard. Le caractere `\n` represente un
 retour a la ligne.
 
-```c
-printf("Bonjour\n");
-```
+{{ c_exercise: exercices/seance-01/bonjour }}
 
 L'affichage produit par `printf` n'est pas le code de retour du programme. Le
 code de retour est la valeur renvoyee par `return` dans `main`. Les deux notions

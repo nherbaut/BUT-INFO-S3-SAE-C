@@ -6,7 +6,12 @@ class CPlayer extends HTMLElement {
     this.initialCode = this.exercise.files?.[0]?.content || "";
     this.browserRunnable = this.exercise.browser_runnable !== false;
     this.render();
-    this.refreshHighlight();
+  }
+
+  disconnectedCallback() {
+    if (this.themeObserver) {
+      this.themeObserver.disconnect();
+    }
   }
 
   parseExercise() {
@@ -21,21 +26,22 @@ class CPlayer extends HTMLElement {
   render() {
     const title = this.exercise.title || "Programme C";
     const stdin = this.exercise.stdin || "";
+    const usesStdin = this.exercise.uses_stdin === true;
     const runDisabled = this.browserRunnable ? "" : "disabled";
     const runnableLabel = this.browserRunnable ? "" : '<span class="c-player__badge">Local uniquement</span>';
     const stdinBlock = this.browserRunnable
       ? `
-            <label>
-              <strong class="c-player__field-title">
+            <details class="c-player__stdin-details" ${usesStdin ? "open" : ""}>
+              <summary class="c-player__field-title">
                 stdin
                 <span
                   class="c-player__help"
                   tabindex="0"
                   title="Entree standard du programme : saisir ici les valeurs que le programme lirait au clavier. Separer les valeurs par des espaces ou des retours a la ligne, par exemple : 12 14"
                 >(?)</span>
-              </strong>
+              </summary>
               <textarea class="c-player__stdin" spellcheck="false">${this.escape(stdin)}</textarea>
-            </label>`
+            </details>`
       : "";
     const outputBlock = this.browserRunnable
       ? `
@@ -76,13 +82,66 @@ class CPlayer extends HTMLElement {
     `;
     this.querySelector(".c-player__run").addEventListener("click", () => this.run());
     this.querySelector(".c-player__reset").addEventListener("click", () => this.reset());
-    this.querySelector(".c-player__code").addEventListener("input", () => this.refreshHighlight());
-    this.querySelector(".c-player__code").addEventListener("scroll", () => this.syncHighlightScroll());
+    this.setupCodeEditor();
     this.updateStatus();
   }
 
+  setupCodeEditor() {
+    const textarea = this.querySelector(".c-player__code");
+    if (!textarea) {
+      return;
+    }
+    if (window.CodeMirror) {
+      const wrap = this.querySelector(".c-player__code-wrap");
+      const highlight = this.querySelector(".c-player__highlight");
+      if (wrap) {
+        wrap.classList.add("c-player__code-wrap--codemirror");
+      }
+      if (highlight) {
+        highlight.hidden = true;
+      }
+      this.editor = window.CodeMirror.fromTextArea(textarea, {
+        mode: "text/x-csrc",
+        lineNumbers: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        lineWrapping: false,
+        readOnly: this.readonly ? "nocursor" : false,
+        theme: this.codeMirrorTheme(),
+        viewportMargin: Infinity,
+      });
+      this.editor.setSize("100%", "18rem");
+      this.themeObserver = new MutationObserver(() => {
+        this.editor.setOption("theme", this.codeMirrorTheme());
+      });
+      this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+      return;
+    }
+
+    textarea.addEventListener("input", () => this.refreshHighlight());
+    textarea.addEventListener("scroll", () => this.syncHighlightScroll());
+    this.refreshHighlight();
+  }
+
+  codeMirrorTheme() {
+    return document.documentElement.getAttribute("data-bs-theme") === "dark" ? "material-darker" : "default";
+  }
+
+  getCode() {
+    return this.editor ? this.editor.getValue() : this.querySelector(".c-player__code").value;
+  }
+
+  setCode(value) {
+    if (this.editor) {
+      this.editor.setValue(value);
+    } else {
+      this.querySelector(".c-player__code").value = value;
+    }
+  }
+
   reset() {
-    this.querySelector(".c-player__code").value = this.initialCode;
+    this.setCode(this.initialCode);
     const stdin = this.querySelector(".c-player__stdin");
     if (stdin) {
       stdin.value = this.exercise.stdin || "";
@@ -102,8 +161,8 @@ class CPlayer extends HTMLElement {
       return;
     }
 
-    const source = this.querySelector(".c-player__code").value;
-    const stdin = this.querySelector(".c-player__stdin").value;
+    const source = this.getCode();
+    const stdin = this.querySelector(".c-player__stdin")?.value || "";
 
     if (window.CCompilerRuntime?.run) {
       this.setStatus("Compilation en cours...");

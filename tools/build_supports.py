@@ -17,6 +17,7 @@ PLAYER_SRC = ROOT / "web" / "player"
 PLAYER_DST = BUILD / "player"
 VENDOR_SRC = ROOT / "web" / "vendor"
 VENDOR_DST = BUILD / "vendor"
+CODEMIRROR_INCLUDE = BUILD / "codemirror-include.html"
 PDF_DST = BUILD / "assets" / "pdf"
 ZIP_DST = BUILD / "assets" / "zip"
 PDF_FOOTER_TEX = BUILD / "pdf-footer.tex"
@@ -35,8 +36,10 @@ ADMIN_DIGEST = "$argon2id$v=19$m=65536,t=3,p=4$SDaf4HTJfRAO2wys9QIE7A$bLo2gTmVGo
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
 CODE_FENCE_C = re.compile(r"^```\s*c\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
-QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
-QUESTION_START = re.compile(r"^:::\s+question(?:\s+\{#([A-Za-z0-9_-]+)\})?\s*$")
+C_MAIN_RE = re.compile(r"\bint\s+main\s*\(", re.S)
+C_STDIN_RE = re.compile(r"\b(?:scanf|getchar|gets)\s*\(|\bfgets\s*\(|\bfscanf\s*\(\s*stdin\b|\bfread\s*\([^;]*\bstdin\b", re.S)
+QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([^}]+)\})?\s*$")
+QUESTION_START = re.compile(r"^:::\s+question(?:\s+\{#([^}]+)\})?\s*$")
 DIV_END = re.compile(r"^:::\s*$")
 OPTION_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
 FIELD_RE = re.compile(r"^([A-Za-z_-]+):\s*(.*)$")
@@ -57,6 +60,22 @@ def write_text(path, content):
 
 def strip_tags(value):
     return html.unescape(TAG_RE.sub("", value)).strip()
+
+
+def codemirror_css_links():
+    return """
+  <link rel="stylesheet" href="vendor/codemirror/codemirror.min.css">
+  <link rel="stylesheet" href="vendor/codemirror/material-darker.min.css">""".rstrip()
+
+
+def codemirror_script_tags():
+    return """
+<script src="vendor/codemirror/codemirror.min.js"></script>
+<script src="vendor/codemirror/clike.min.js"></script>""".strip()
+
+
+def write_codemirror_include():
+    write_text(CODEMIRROR_INCLUDE, codemirror_script_tags() + "\n")
 
 
 def site_footer():
@@ -120,6 +139,7 @@ def load_exercise(path_text):
     meta["path"] = str(exercise_dir.relative_to(ROOT))
     meta["files"] = files
     meta["browser_runnable"] = len(files) == 1
+    meta["uses_stdin"] = bool(meta.get("stdin")) or any(uses_stdin(file["content"]) for file in files)
     return meta
 
 
@@ -316,8 +336,15 @@ def encode_data(value):
     return base64.b64encode(json.dumps(value, ensure_ascii=False).encode("utf-8")).decode("ascii")
 
 
+def is_complete_c_program(source):
+    return bool(C_MAIN_RE.search(source))
+
+
+def uses_stdin(source):
+    return bool(C_STDIN_RE.search(source))
+
+
 def render_html_code_example(source, index):
-    runnable = "int main" in source
     payload = encode_data(
         {
             "id": f"code-example-{index}",
@@ -330,10 +357,11 @@ def render_html_code_example(source, index):
             "expected_stderr": "",
             "path": "",
             "files": [{"name": "main.c", "content": source}],
-            "browser_runnable": runnable,
+            "browser_runnable": True,
+            "uses_stdin": uses_stdin(source),
         }
     )
-    return f'<c-player data-readonly="true" data-exercise-b64="{payload}"></c-player>'
+    return f'<c-player data-readonly="false" data-exercise-b64="{payload}"></c-player>'
 
 
 def render_html_quiz(quiz, fold_validated=False):
@@ -454,8 +482,14 @@ def expand_markdown(source, html_mode):
             if index >= len(lines):
                 raise ValueError("Bloc de code C non ferme")
             index += 1
-            code_example_count += 1
-            output.append(render_html_code_example("\n".join(code_lines) + "\n", code_example_count))
+            source = "\n".join(code_lines) + "\n"
+            if is_complete_c_program(source):
+                code_example_count += 1
+                output.append(render_html_code_example(source, code_example_count))
+            else:
+                output.append("```c")
+                output.extend(code_lines)
+                output.append("```")
             continue
         if QUIZ_START.match(line):
             block, index = collect_div_block(lines, index)
@@ -487,12 +521,18 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
             "--css",
             "vendor/bootstrap/bootstrap.min.css",
             "--css",
+            "vendor/codemirror/codemirror.min.css",
+            "--css",
+            "vendor/codemirror/material-darker.min.css",
+            "--css",
             "player/c-player.css",
         ]
         if TSCC_RUNTIME.exists():
             command.extend(["--include-after-body", str(TSCC_RUNTIME)])
         command.extend(
             [
+                "--include-after-body",
+                str(CODEMIRROR_INCLUDE),
                 "--include-after-body",
                 str(PLAYER_DST / "c-player.js"),
                 "--include-after-body",
@@ -644,6 +684,7 @@ def landing_page():
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BUT INFO S3 SAE-C</title>
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+{codemirror_css_links()}
   <link rel="stylesheet" href="player/c-player.css">
   <script>
     document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
@@ -748,6 +789,7 @@ def landing_page():
 }})();
 </script>
 {read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{codemirror_script_tags()}
 {read_text(PLAYER_SRC / "c-player.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 {read_text(PLAYER_SRC / "ntfy-chat.js")}
@@ -764,6 +806,7 @@ def live_code_page():
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Code live SAE-C</title>
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+{codemirror_css_links()}
   <link rel="stylesheet" href="player/c-player.css">
   <script>
     document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
@@ -783,6 +826,7 @@ def live_code_page():
 </main>
 {site_footer()}
 {read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{codemirror_script_tags()}
 {read_text(PLAYER_SRC / "c-player.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
@@ -842,6 +886,7 @@ def live_quiz_page():
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quiz live SAE-C</title>
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+{codemirror_css_links()}
   <link rel="stylesheet" href="player/c-player.css">
   <script>
     document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
@@ -1086,6 +1131,7 @@ def admin_page(flow_items, question_bank):
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin SAE-C</title>
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+{codemirror_css_links()}
   <link rel="stylesheet" href="player/c-player.css">
   <script>
     document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("sae-c.theme.v1") || "light");
@@ -1831,6 +1877,7 @@ def main():
     if VENDOR_DST.exists():
         shutil.rmtree(VENDOR_DST)
     shutil.copytree(VENDOR_SRC, VENDOR_DST)
+    write_codemirror_include()
 
     courses = course_infos()
     all_starters = all_exercises()
