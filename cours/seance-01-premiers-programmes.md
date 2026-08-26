@@ -9,6 +9,8 @@
 - Identifier les ressemblances et differences initiales avec Java.
 - Manipuler des variables, conditions, boucles et tableaux simples.
 
+![Programmation d'application, programmation système et rôle du C](assets/why_c.png){.course-full-width-image}
+
 ## Pourquoi programmer en C ?
 
 Ce cours prepare la programmation système. La **programmation d'application** vise
@@ -64,20 +66,43 @@ description: On cherche surtout le lien avec les API système.
 Un programme C contient une fonction `main`. C'est le point d'entree execute au
 lancement du programme.
 
-```c
+```c {playback=typing}
+/**
+ * Fichiers d'en-tete
+ *
+ * Les declarations de la bibliotheque standard sont importees avant
+ * d'utiliser les fonctions et constantes correspondantes.
+ */
 #include <stdio.h>
 #include <stdlib.h>
+/** */
 
-// pour la compilation dans le navigateur
-#ifndef EXIT_SUCCESS
-  #define EXIT_SUCCESS 0
-#endif
-
+/**
+ * Point d'entree
+ *
+ * main est la première fonction executée. Elle retourne un code entier au
+ * systeme pour indiquer la fin du programme.
+ */
 int main(void)
 {
+/** */
+
+/** Affichage
+ * 
+ * printf est utilisé pour l'affichage de text. Attention à bien ajouter \n à la fin de la ligne
+ */
     printf("Hello World!\n");
+/** */
+
+/** Retour du programme
+ * 
+ * Le code de retour du programme est la valeur (int) retournée par la fonction main.
+ * Il est transmis à l'OS et à l'utilisateur.
+ */
     return EXIT_SUCCESS;
+/** */
 }
+
 ```
 
 Ce programme :
@@ -177,11 +202,11 @@ Le type `int` représente un entier. La variable `note` contient ici la valeur
 title: Types et variables
 
 ::: question {#q-s1-variable-int}
-title: Que stocke une variable `int` ?
+title: Que stocke les variables ?
 description: On declare `int note = 12;`.
 
 - [x] Une valeur entière copiée dans la variable
-- [ ] Une référence vers un objet Java
+- [ ] Une référence vers un objet
   hint: En C, une variable simple contient directement sa valeur.
 - [ ] Une chaine de caractères
 :::
@@ -208,10 +233,58 @@ conditions, les variables et l'affichage.
 
 Les boucles `while` et `for` existent aussi en C.
 
-```c
+```c {playback=typing}
+/** Librairies
+ * 
+ * On inclue les librairies standard
+ */
+#include <stdio.h>
+#include <stdlib.h>
+/**  */
+
+int main(void)
+{
+
+  /** Lecture d'une variable 
+   * 
+   * On commence par déclarer la variable (innutile de lui donner une valeur)
+   */
+  int max;
+  /** */
+  /** Puis on lit une ligne dans le stdin 
+   * 
+   * scanf, comme printf est formaté, et utilise un formatage très proche de java.
+   * Ici, on passe l'adresse de la variable max, afin que la fonction scanf puisse
+   * modifier sa valeur.
+  */
+  scanf("%d",&max);
+  /**  */
+  /** Boucle For 
+   * 
+   * en C21, C'est exactement la même syntaxe que le Java
+   */
+  for (int i= 0; i < max; i++) {
+    /** */
+      printf("%d\n", i);
+  }
+
+
+return 0;
+
+}
+```
+
+### Tranformez cette boucle for en boucle while
+
+```c 
+#include <stdio.h>
+#include <stdlib.h>
+
+
+int main(void)
+{
 int i;
-for (i = 0; i < 5; i++) {
-    printf("%d\n", i);
+
 }
 ```
 
@@ -224,21 +297,52 @@ Du point de vue algorithmique, un tableau est une collection de données du mêm
 type, accessibles par un indice entier. En C, un tableau est aussi une zone
 mémoire contenant des éléments consécutifs.
 
-```c
-int notes[3] = {12, 14, 9};
-```
+```c {playback=typing}
+/** Declaration du tableau
+ *
+ * Cette declaration reserve trois entiers et initialise leurs valeurs. Les
+ * indices valides du tableau sont 0, 1 et 2.
+ */
+int notes[] = {12, 14, 9};
+/** */
 
-Ici, `notes` contient trois entiers. Les indices valides sont `0`, `1` et `2`.
+/** autre syntaxe
+ * 
+ * Il est aussi possible de déclarer un tableau vide et d'initialiser ses valeurs
+ * explicitement
+ */
+int notes[3];
+notes[0]=12;
+notes[1]=14;
+notes[2]=9;
+/** */
 
-```c
+/** taille du tableau 
+ * 
+ * Il est néanoins impossible de déclarer un tableau vide sans spécifier sa taille.
+*/
+int notes[];
+/** */
+
+/** Calcul de la somme
+ *
+ * La boucle parcourt chaque indice valide. A chaque iteration, la valeur de
+ * l'element courant est ajoutee a la somme.
+ */
 int somme = 0;
 int i;
 
 for (i = 0; i < 3; i++) {
     somme += notes[i];
 }
+/** */
 
+/** Affichage du resultat
+ *
+ * La valeur calculee est finalement envoyee sur la sortie standard.
+ */
 printf("somme = %d\n", somme);
+/** */
 ```
 
 Pour cette séance, on retient surtout :
@@ -276,18 +380,16 @@ printf "12 14\n" | ./moyenne
 
 Le programme lit les valeurs comme si elles avaient été tapées au clavier.
 
+On peut aussi démarer simplement le programme et taper avec son clavier les valeurs attendues lorsque `scanf` bloque l'exécution en attente de lecture sur l'entrée standard (`stdin`)
+
+
+
 ## Executer dans le navigateur
 
 Le système intégré à la page compile et exécute des programmes courts. Il ne
 remplace pas GCC/Clang, mais il suffit pour manipuler les premières notions sans
 installer l'outillage pendant la séance 1.
 
-Pour chaque exercice :
-
-- lire le code ;
-- modifier une partie limitée ;
-- lancer `Build & Run` ;
-- observer les sorties du compilateur et du programme.
 
 ## Retrouver l'exercice dans le dépôt local
 
@@ -305,20 +407,15 @@ fichiers est l'objectif de la séance 2.
 
 ## Présentation rapide du projet
 
-- Theme general.
-- Livrables.
-- Jalons non encadrés.
-- Évaluation individuelle finale.
+Le projet capteurs analysera des mesures de temperature fournies par une
+bibliotheque. Le reseau et le JSON sont hors sujet: le travail portera sur les
+structures, les calculs, la memoire dynamique, les tests et le rapport.
 
-Le projet n'est pas développable entièrement des la séance 1. Le travail non
-encadre peut déjà porter sur la lecture du sujet, les spécifications, les cas de
-test attendus et la compréhension de l'organisation du dépôt.
-
-## Exercices propose
+## Exercices proposés à faire à la maison
 
 - Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
 - Calcul de moyenne.
-- Maximum de trois entiers.
-- Comptage des notes supérieures a 10.
+- Moyenne de trois entiers.
+- Comptage des notes supérieures à 10.
 - Somme des éléments d'un tableau d'entiers.
 - Table de multiplication.

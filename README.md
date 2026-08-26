@@ -10,12 +10,12 @@ enseignante.
 
 # Planning
 
- - Semaine 38 (14/09/2026) : 2 séances de 2h encadrées (4h) et 1 séance 2 de 2h non encadrée
- - Semaine 39 (21/09/2026) : 2 séances de 2h encadrées (4h) et 1 séance 2 de 2h non encadrée
- - Semaine 40 (28/09/2026) : 1 séance de 2h encadrée (2h) et 1 séance 2 de 2h non encadrée  
- - Semaine 50 (07/12/2026) : 2 séances de 2h non encadrées (4h)
+Le parcours alterne cinq seances encadrees et trois jalons autonomes:
 
-Soit 5 séances encadrées et 5 séances non encadrées.
+1. Seance 1, puis jalon autonome 1 de prise en main.
+2. Seances 2 et 3, puis jalon autonome 2 de statistiques sur la pile.
+3. Seance 4, puis jalon autonome 3 de serie dynamique et version candidate.
+4. Seance 5 de finalisation et evaluation.
 
 ## Prerequis etudiants
 
@@ -41,7 +41,7 @@ Explorer](https://godbolt.org/). Les exemples de pointeurs de la seance 3 peuven
 
 ## Arborescence
 
-- `cours/` : trames des six seances
+- `cours/` : trames des cinq seances et page de bonnes pratiques
 - `exercices/` : exercices C compilables avec Makefile
 - `projet/` : starter code du projet
 - `assets/` : emplacement pour images et schemas
@@ -104,6 +104,50 @@ Pour inclure un exercice dans une seance :
 
 Chaque dossier d'exercice doit contenir un `exercise.json` qui decrit les
 sources, l'entree standard, la sortie attendue et les commandes locales.
+
+### Lecture C animee
+
+Un bloc C peut etre presente comme une lecture guidee, sans edition ni
+compilation, avec l'attribut Pandoc `playback=typing` :
+
+````markdown
+```c {playback=typing}
+/**
+ * Titre de l'etape
+ *
+ * Explication affichee pendant la pause.
+ */
+#include <stdio.h>
+/** */
+```
+````
+
+Un commentaire de documentation non vide ouvre une annotation; le marqueur
+`/** */` la ferme. Le code entre les deux est tape, puis surligne avant
+l'affichage de l'explication. Les marqueurs ne sont pas visibles dans le lecteur
+navigateur et ne creent pas de lignes vides supplementaires, mais restent des
+commentaires C ordinaires dans le PDF. Chaque bloc annote recoit une couleur;
+son commentaire est visible au survol et peut etre epingle par clic. Les
+commentaires `/* ... */` et `// ...` ne creent pas de pause.
+
+### Messages des composants web
+
+Les textes ajoutes dynamiquement par les composants web sont regroupes dans
+`web/player/messages.js`. Ce fichier est charge avant les lecteurs C, les quiz,
+le widget ntfy, le theme et le suivi des exercices. Modifier ses valeurs suffit
+pour adapter ou traduire l'interface publiee.
+
+Les variables d'un message utilisent la forme `{nom}`, par exemple
+`"Etape {current} / {total}"`. Les composants passent les valeurs necessaires
+au dictionnaire; les contenus pedagogiques Markdown, les exercices et les
+messages ntfy recus ne sont pas concernes.
+
+Une valeur peut aussi etre un tableau de chaines. Le resoluteur choisit alors
+une variante au hasard a chaque appel, avant de remplacer les variables :
+
+```js
+typing: ["Je tape vite non?", "Le C, c'est la vie"]
+```
 
 ## Publication GitHub Pages
 

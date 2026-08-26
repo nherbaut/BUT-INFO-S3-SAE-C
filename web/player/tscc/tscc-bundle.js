@@ -53599,14 +53599,49 @@ ${dataStr}`].filter(Boolean).join("\n");
   function normalizeBrowserC(source) {
     return source.replace(/%zu/g, "%d").replace(/sizeof\s+\*\s*[A-Za-z_][A-Za-z0-9_]*/g, "sizeof(int)").replace(/[A-Za-z_][A-Za-z0-9_]*\s*==\s*NULL/g, "0").replace(/NULL\s*==\s*[A-Za-z_][A-Za-z0-9_]*/g, "0").replace(/(int\s*\*\s*values\s*=\s*malloc\s*\([^;]+;\s*)/, "$1\n    int *resized;\n").replace(/int\s*\*\s*resized\s*=/g, "resized =").replace(/realloc\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,[^;]*\)/g, "$1");
   }
+  function renameBrowserReservedIdentifiers(source) {
+    const reserved = new Set(["c"]);
+    return source.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g, (match7) => reserved.has(match7) ? `__saec_${match7}` : match7);
+  }
   function prepareSource(source, stdin) {
-    const transformed = normalizeBrowserC(transformScanf(source, stdin));
+    const transformed = renameBrowserReservedIdentifiers(normalizeBrowserC(transformScanf(source, stdin)));
     return transformed.replace(
       /int\s+main\s*\(([^)]*)\)\s*\{/,
       (_match, args) => `#include <kernel/textmode.h>
 int main(${args}) {
     kernel_screen_clear();`
     );
+  }
+  function fixDuplicateStringDataLabels(asmSource) {
+    const lines = String(asmSource).split("\n");
+    const blockPattern = /^(@@_c_\d+_):$/;
+    const blocks = [];
+    for (let index = 0; index < lines.length - 2; index += 1) {
+      const match = lines[index].trim().match(blockPattern);
+      if (!match) {
+        continue;
+      }
+      const label = match[1];
+      if (
+        lines[index + 1].trim() === `dw ${label}@str$0_0` &&
+        lines[index + 2].trim().startsWith(`${label}@str$0_0: db `)
+      ) {
+        blocks.push({ label, start: index, end: index + 2 });
+      }
+    }
+    const lastByLabel = new Map();
+    for (const block of blocks) {
+      lastByLabel.set(block.label, block);
+    }
+    const remove = new Set();
+    for (const block of blocks) {
+      if (lastByLabel.get(block.label) !== block) {
+        for (let index = block.start; index <= block.end; index += 1) {
+          remove.add(index);
+        }
+      }
+    }
+    return lines.filter((_line, index) => !remove.has(index)).join("\n");
   }
   function buildBinary(source, stdin) {
     return pipe(
@@ -53615,7 +53650,7 @@ int main(${args}) {
         arch: "X86_16" /* X86_16 */,
         optimization: { enabled: true }
       }),
-      Either_exports.bimap(mapErrors, (compilerResult) => wrapWithX86BootsectorAsm(compilerResult.codegen.asm)),
+      Either_exports.bimap(mapErrors, (compilerResult) => fixDuplicateStringDataLabels(wrapWithX86BootsectorAsm(compilerResult.codegen.asm))),
       Either_exports.chainW(
         (asmRaw) => pipe(
           asmRaw,

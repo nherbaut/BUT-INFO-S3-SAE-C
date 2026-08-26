@@ -1,5 +1,6 @@
 <script>
 (() => {
+  const t = (key, values) => window.SAECMessages.t(`ntfy.${key}`, values);
   const storageKey = "sae-c.ntfy.group";
   const usernameKey = "sae-c.ntfy.username";
   const liveCodeKey = "sae-c.live.code";
@@ -85,6 +86,24 @@
     return baseUrl.pathname.replace(/[^/]*$/, "");
   }
 
+  function navbarOffset() {
+    const navbar = document.querySelector(".navbar");
+    return navbar ? Math.ceil(navbar.getBoundingClientRect().height + 12) : 0;
+  }
+
+  function scrollHashIntoView() {
+    if (!window.location.hash) {
+      return;
+    }
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+    const top = target.getBoundingClientRect().top + window.scrollY - navbarOffset();
+    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  }
+
   function localSiteUrl(message) {
     const trimmed = String(message || "").trim();
     if (!/^https?:\/\/\S+$/.test(trimmed)) {
@@ -119,7 +138,7 @@
   function cPayload(source) {
     return encodeData({
       id: `ntfy-${Date.now()}`,
-      title: "Message C",
+      title: t("messageCode"),
       statement: "",
       sources: ["main.c"],
       main: "main.c",
@@ -139,28 +158,28 @@
     root.innerHTML = `
       <div class="ntfy-chat__header">
         <button class="ntfy-chat__toggle" type="button" aria-expanded="false">
-          <span>Chat SAE-C <span class="ntfy-chat__username">${escape(username)}</span></span>
+          <span>${escape(t("title"))} <span class="ntfy-chat__username">${escape(username)}</span></span>
           <span class="ntfy-chat__unread" data-unread hidden></span>
-          <span class="ntfy-chat__status" data-status>Configuration...</span>
+          <span class="ntfy-chat__status" data-status>${escape(t("configuring"))}</span>
         </button>
-        <button class="ntfy-chat__settings" type="button" aria-label="Configurer le groupe ntfy" title="Configurer le groupe">Groupe</button>
+        <button class="ntfy-chat__settings" type="button" aria-label="${escape(t("settingsAria"))}" title="${escape(t("settingsTitle"))}">${escape(t("settingsButton"))}</button>
       </div>
       <div class="ntfy-chat__panel">
         <div class="ntfy-chat__messages" data-messages></div>
       </div>
       <div class="ntfy-chat__modal" data-modal hidden>
         <div class="ntfy-chat__modal-dialog" role="dialog" aria-modal="true" aria-labelledby="ntfy-chat-group-title">
-          <h2 id="ntfy-chat-group-title">Groupe ntfy</h2>
-          <label for="ntfy-chat-group">Groupe de l'etudiant</label>
+          <h2 id="ntfy-chat-group-title">${escape(t("groupTitle"))}</h2>
+          <label for="ntfy-chat-group">${escape(t("groupLabel"))}</label>
           <select id="ntfy-chat-group" data-group-select>
             <option value="S3A">S3A</option>
             <option value="S3B">S3B</option>
             <option value="S3C">S3C</option>
-            <option value="visiteur">visiteur</option>
+            <option value="visiteur">${escape(t("visitor"))}</option>
           </select>
           <div class="ntfy-chat__modal-actions">
-            <button class="btn btn-secondary" type="button" data-close-config>Annuler</button>
-            <button class="btn btn-primary" type="button" data-save-config>Enregistrer</button>
+            <button class="btn btn-secondary" type="button" data-close-config>${escape(t("cancel"))}</button>
+            <button class="btn btn-primary" type="button" data-save-config>${escape(t("save"))}</button>
           </div>
         </div>
       </div>
@@ -242,7 +261,7 @@
 
   function openLiveCode(source, title) {
     storeJson(liveCodeKey, {
-      title: title || "Message C",
+      title: title || t("messageCode"),
       source,
       receivedAt: new Date().toISOString(),
     });
@@ -252,7 +271,7 @@
   function openLiveQuiz(action) {
     storeJson(liveQuizKey, {
       id: action.id || `live-quiz-${Date.now()}`,
-      title: action.title || "Question live",
+      title: action.title || t("liveQuestion"),
       question: action.question,
       responseTopic: action.responseTopic,
       username: storedUsername(),
@@ -261,11 +280,20 @@
     window.location.assign(siteHref("live-quiz.html"));
   }
 
+  function navigateToLocalUrl(target) {
+    if (target.pathname === window.location.pathname && target.search === window.location.search && target.hash) {
+      window.location.hash = target.hash;
+      window.setTimeout(scrollHashIntoView, 0);
+      return;
+    }
+    window.location.assign(target.href);
+  }
+
   function handleAction(root, action) {
     if (action.type === "navigate" && action.url) {
       const target = localSiteUrl(action.url);
       if (target) {
-        window.location.assign(target.href);
+        navigateToLocalUrl(target);
       }
       return true;
     }
@@ -291,13 +319,13 @@
     }
     const target = localSiteUrl(normalized);
     if (target) {
-      window.location.assign(target.href);
+      navigateToLocalUrl(target);
       return;
     }
     const lines = normalized.split("\n");
     if (lines[0] === "c") {
       markUnread(root);
-      openLiveCode(lines.slice(1).join("\n"), "Message C");
+      openLiveCode(lines.slice(1).join("\n"), t("messageCode"));
       return;
     }
     markUnread(root);
@@ -328,22 +356,22 @@
   function connect(root, group) {
     disconnect();
     if (group === "visiteur") {
-      setStatus(root, "Visiteur");
+      setStatus(root, t("visitorStatus"));
       return;
     }
     if (!window.EventSource) {
-      setStatus(root, "SSE indisponible");
+      setStatus(root, t("sseUnavailable"));
       return;
     }
     const topicUrl = groups[group];
     if (!topicUrl) {
-      setStatus(root, "Groupe requis");
+      setStatus(root, t("groupRequired"));
       openConfig(root);
       return;
     }
     currentSource = new EventSource(topicUrl);
-    currentSource.onopen = () => setStatus(root, `${group} connecte`);
-    currentSource.onerror = () => setStatus(root, `${group} reconnexion...`);
+    currentSource.onopen = () => setStatus(root, t("connected", { group }));
+    currentSource.onerror = () => setStatus(root, t("reconnecting", { group }));
     currentSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -356,12 +384,15 @@
     };
   }
 
+  window.setTimeout(scrollHashIntoView, 0);
+  window.addEventListener("hashchange", () => window.setTimeout(scrollHashIntoView, 0));
+
   const root = createWidget();
   const group = storedGroup();
   if (group) {
     connect(root, group);
   } else {
-    setStatus(root, "Groupe requis");
+    setStatus(root, t("groupRequired"));
     openConfig(root);
   }
 })();

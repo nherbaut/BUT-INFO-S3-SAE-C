@@ -1,5 +1,9 @@
 <script>
 class QuizPlayer extends HTMLElement {
+  t(key, values) {
+    return window.SAECMessages.t(`quiz.${key}`, values);
+  }
+
   connectedCallback() {
     this.quiz = this.parseQuiz();
     this.progress = this.readProgress();
@@ -23,16 +27,17 @@ class QuizPlayer extends HTMLElement {
       <details class="quiz-player card my-4" data-quiz-id="${this.escape(this.quiz.id)}"${openAttribute}>
         <summary class="quiz-player__header card-header">
           <div>
+            <div class="content-kind content-kind--quiz"><span class="content-kind__icon" aria-hidden="true">?</span>${this.escape(window.SAECMessages.t("contentType.quiz"))}</div>
             <h2 class="quiz-player__title h5">${this.escape(this.quiz.title)}</h2>
             ${this.quiz.description ? `<p class="quiz-player__description">${this.escape(this.quiz.description)}</p>` : ""}
           </div>
-          <span class="quiz-player__badge badge ${validated ? "text-bg-success" : "text-bg-secondary"}">${validated ? "Valide" : "A faire"}</span>
+          <span class="quiz-player__badge badge ${validated ? "text-bg-success" : "text-bg-secondary"}">${this.escape(this.t(validated ? "valid" : "todo"))}</span>
         </summary>
         <div class="card-body">
           ${this.quiz.questions.map((question, index) => this.renderQuestion(question, index)).join("")}
           <div class="quiz-player__actions">
-            <button type="button" class="quiz-player__validate btn btn-primary">Valider</button>
-            <button type="button" class="quiz-player__hint btn btn-info d-none">Afficher les indices</button>
+            <button type="button" class="quiz-player__validate btn btn-primary">${this.escape(this.t("validate"))}</button>
+            <button type="button" class="quiz-player__hint btn btn-info d-none">${this.escape(this.t("hints"))}</button>
           </div>
           <div class="quiz-player__feedback mt-3" aria-live="polite"></div>
         </div>
@@ -100,18 +105,18 @@ class QuizPlayer extends HTMLElement {
     this.updateQuizBadge(allCorrect);
 
     if (allCorrect) {
-      this.setFeedback("Bonne reponse. Quiz valide.", "success");
+      this.setFeedback(this.t("correct"), "success");
       this.setValidateClass("btn-success");
-      this.querySelector(".quiz-player__validate").textContent = "Valider";
+      this.querySelector(".quiz-player__validate").textContent = this.t("validate");
       this.querySelector(".quiz-player__hint").classList.add("d-none");
       if (this.dataset.foldValidated === "true") {
         this.querySelector(".quiz-player").open = false;
       }
     } else {
       this.restartMode = true;
-      this.setFeedback("Il manque au moins une bonne reponse. Recommencer le quiz pour retenter.", "warning");
+      this.setFeedback(this.t("incorrect"), "warning");
       this.setValidateClass("btn-warning");
-      this.querySelector(".quiz-player__validate").textContent = "Recommencer";
+      this.querySelector(".quiz-player__validate").textContent = this.t("restart");
       this.toggleHintButton();
     }
   }
@@ -128,7 +133,7 @@ class QuizPlayer extends HTMLElement {
     fieldset.classList.toggle("quiz-player__question--ok", correct);
     fieldset.classList.toggle("quiz-player__question--wrong", !correct && state.attempts > 0);
     if (correct) {
-      feedback.innerHTML = '<div class="alert alert-success py-2 mt-2 mb-0">Question validee.</div>';
+      feedback.innerHTML = `<div class="alert alert-success py-2 mt-2 mb-0">${this.escape(this.t("questionValid"))}</div>`;
     }
   }
 
@@ -169,7 +174,7 @@ class QuizPlayer extends HTMLElement {
   updateQuizBadge(validated) {
     const badge = this.querySelector(".quiz-player__badge");
     badge.className = `quiz-player__badge badge ${validated ? "text-bg-success" : "text-bg-secondary"}`;
-    badge.textContent = validated ? "Valide" : "A faire";
+    badge.textContent = this.t(validated ? "valid" : "todo");
   }
 
   quizProgress() {

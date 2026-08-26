@@ -29,21 +29,21 @@ $(PROGRAM): src/main.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $< $(LDLIBS) -o $@
 
 run: $(PROGRAM)
-	printf "3 9\n" | ./$(PROGRAM)
+	./$(PROGRAM)
 
 test: $(PROGRAM)
-	printf "3 9\n" | ./$(PROGRAM) | grep -q "max = 9"
+	printf "3 4 9\n" | ./$(PROGRAM) | grep -q "max = 9"
 
 memcheck: memcheck-tests
 
 memcheck-tests: $(PROGRAM)
-	printf "3 9\n" | $(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM)
+	printf "3 4 9\n" | $(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM)
 
 memcheck-run: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
 
 memcheck-scenario: $(PROGRAM)
-	printf "3 9\n" | $(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
+	printf "3 4 9\n" | $(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
 
 clean:
 	rm -rf $(BUILD_DIR)

@@ -1,8 +1,13 @@
 <script>
 class CPlayer extends HTMLElement {
+  t(key, values) {
+    return window.SAECMessages.t(`cPlayer.${key}`, values);
+  }
+
   connectedCallback() {
     this.exercise = this.parseExercise();
     this.readonly = this.dataset.readonly === "true";
+    this.contentKind = this.dataset.contentKind || "";
     this.initialCode = this.exercise.files?.[0]?.content || "";
     this.browserRunnable = this.exercise.browser_runnable !== false;
     this.render();
@@ -24,20 +29,23 @@ class CPlayer extends HTMLElement {
   }
 
   render() {
-    const title = this.exercise.title || "Programme C";
+    const title = this.exercise.title || this.t("defaultTitle");
     const stdin = this.exercise.stdin || "";
     const usesStdin = this.exercise.uses_stdin === true;
     const runDisabled = this.browserRunnable ? "" : "disabled";
-    const runnableLabel = this.browserRunnable ? "" : '<span class="c-player__badge">Local uniquement</span>';
+    const runnableLabel = this.browserRunnable ? "" : `<span class="c-player__badge">${this.escape(this.t("localOnly"))}</span>`;
+    const kindLabel = this.contentKind
+      ? `<span class="content-kind content-kind--${this.escape(this.contentKind)}"><span class="content-kind__icon" aria-hidden="true">${this.contentKind === "exercise" ? "&lt;/&gt;" : "{}"}</span>${this.escape(window.SAECMessages.t(`contentType.${this.contentKind}`))}</span>`
+      : "";
     const stdinBlock = this.browserRunnable
       ? `
             <details class="c-player__stdin-details" ${usesStdin ? "open" : ""}>
               <summary class="c-player__field-title">
-                stdin
+                ${this.escape(this.t("stdin"))}
                 <span
                   class="c-player__help"
                   tabindex="0"
-                  title="Entree standard du programme : saisir ici les valeurs que le programme lirait au clavier. Separer les valeurs par des espaces ou des retours a la ligne, par exemple : 12 14"
+                  title="${this.escape(this.t("stdinHelp"))}"
                 >(?)</span>
               </summary>
               <textarea class="c-player__stdin" spellcheck="false">${this.escape(stdin)}</textarea>
@@ -47,28 +55,28 @@ class CPlayer extends HTMLElement {
       ? `
           <div class="c-player__output">
             <div class="c-player__panel c-player__panel--unified">
-              <strong>Sorties</strong>
+              <strong>${this.escape(this.t("outputs"))}</strong>
               <pre class="c-player__combined-output"></pre>
             </div>
           </div>`
       : "";
     const bodyClass = this.browserRunnable ? "c-player__body" : "c-player__body c-player__body--single";
     this.innerHTML = `
-      <div class="c-player">
+      <div class="c-player${this.contentKind ? ` c-player--${this.escape(this.contentKind)}` : ""}">
         <div class="c-player__bar">
-          <span class="c-player__title">${this.escape(title)} ${runnableLabel}</span>
+          <span class="c-player__title">${kindLabel}<span>${this.escape(title)}</span> ${runnableLabel}</span>
           <span class="c-player__actions">
-            <button class="c-player__run" type="button" ${runDisabled}>Build & Run</button>
-            <button class="c-player__reset" type="button">Reset</button>
+            <button class="c-player__run" type="button" ${runDisabled}>${this.escape(this.t("run"))}</button>
+            <button class="c-player__reset" type="button">${this.escape(this.t("reset"))}</button>
           </span>
         </div>
         <div class="c-player__note">
-          <span class="c-player__status">Initialisation du runtime...</span>
+          <span class="c-player__status">${this.escape(this.t("initializing"))}</span>
         </div>
         <div class="${bodyClass}">
           <div class="c-player__editor">
             <label>
-              <strong>Starter code</strong>
+              <strong>${this.escape(this.t("starterCode"))}</strong>
               <span class="c-player__code-wrap">
                 <pre class="c-player__highlight" aria-hidden="true"></pre>
                 <textarea class="c-player__code" spellcheck="false" ${this.readonly ? "readonly" : ""}>${this.escape(this.initialCode)}</textarea>
@@ -155,9 +163,9 @@ class CPlayer extends HTMLElement {
     if (!this.browserRunnable) {
       const newline = String.fromCharCode(10);
       this.show({
-        compilerStderr: `Exercice multi-fichiers : execution navigateur indisponible.${newline}Telecharger le starter code ou cloner le depot, puis utiliser les commandes locales indiquees sous l'exercice.${newline}`,
+        compilerStderr: this.t("localOnlyOutput"),
       });
-      this.setStatus("Exercice local uniquement.");
+      this.setStatus(this.t("localOnlyStatus"));
       return;
     }
 
@@ -165,7 +173,7 @@ class CPlayer extends HTMLElement {
     const stdin = this.querySelector(".c-player__stdin")?.value || "";
 
     if (window.CCompilerRuntime?.run) {
-      this.setStatus("Compilation en cours...");
+      this.setStatus(this.t("compiling"));
       try {
         const result = await window.CCompilerRuntime.run({
           exercise: this.exercise,
@@ -173,13 +181,15 @@ class CPlayer extends HTMLElement {
           stdin,
         });
         this.show(result);
-        this.setStatus("Execution terminee.");
+        const hasStderr = [result.compilerStderr, result.programStderr]
+          .some((stream) => String(stream || "").trim().length > 0);
+        this.setStatus(this.t(hasStderr ? "completedWithErrors" : "completed"));
       } catch (error) {
         const newline = String.fromCharCode(10);
         this.show({
-          compilerStderr: `Erreur runtime: ${error.message || error}${newline}`,
+          compilerStderr: this.t("runtimeError", { error: error.message || error }),
         });
-        this.setStatus("Erreur runtime.");
+        this.setStatus(this.t("runtimeErrorStatus"));
       }
       return;
     }
@@ -187,14 +197,14 @@ class CPlayer extends HTMLElement {
     const unchanged = source.trim() === this.initialCode.trim();
     const newline = String.fromCharCode(10);
     this.show({
-      compilerStdout: unchanged ? `Compilation de reference du support.${newline}` : "",
+      compilerStdout: unchanged ? this.t("referenceCompilation") : "",
       compilerStderr: unchanged
-        ? `Runtime navigateur non installe : sortie de reference affichee sans compilation reelle.${newline}`
-        : `Runtime navigateur non installe : impossible de compiler les modifications dans le navigateur.${newline}Utiliser les commandes locales indiquees sous l'exercice.${newline}`,
+        ? this.t("runtimeUnavailableReference")
+        : this.t("runtimeUnavailableChanged"),
       programStdout: unchanged ? (this.exercise.expected_stdout || "") : "",
       programStderr: unchanged ? (this.exercise.expected_stderr || "") : "",
     });
-    this.setStatus("Runtime C navigateur absent : sortie de reference uniquement.");
+    this.setStatus(this.t("runtimeUnavailableStatus"));
   }
 
   show(result) {
@@ -242,13 +252,13 @@ class CPlayer extends HTMLElement {
 
   updateStatus() {
     if (!this.browserRunnable) {
-      this.setStatus("Exercice multi-fichiers : utiliser le Makefile local.");
+      this.setStatus(this.t("localMakefileStatus"));
     } else if (window.CCompilerRuntime?.ready === false) {
-      this.setStatus("Runtime C navigateur detecte, mais pas encore pret.");
+      this.setStatus(this.t("runtimeWaiting"));
     } else if (window.CCompilerRuntime?.run) {
-      this.setStatus("Runtime C navigateur pret.");
+      this.setStatus(this.t("runtimeReady"));
     } else {
-      this.setStatus("Runtime C navigateur absent : sortie de reference uniquement.");
+      this.setStatus(this.t("runtimeUnavailableStatus"));
     }
   }
 

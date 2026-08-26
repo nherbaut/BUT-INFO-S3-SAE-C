@@ -1,6 +1,8 @@
 build/
 .emscripten-cache/
+__pycache__/
 *.o
+teacher-private/
 
 exercices/seance-01/moyenne/moyenne
 exercices/seance-01/max3/max3

@@ -1,5 +1,5 @@
 {
-  "id": "seance-05-etudiants",
+  "id": "seance-03-etudiants",
   "title": "Structure Etudiant",
   "statement": "Creer une structure opaque, allouer ses champs dynamiquement, afficher puis liberer.",
   "sources": ["src/main.c", "src/etudiant.c", "include/projet/etudiant.h"],

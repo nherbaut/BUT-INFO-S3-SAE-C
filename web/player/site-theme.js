@@ -1,6 +1,7 @@
 <script>
 (() => {
   const storageKey = "sae-c.theme.v1";
+  const t = (key, values) => window.SAECMessages.t(`theme.${key}`, values);
 
   function currentTheme() {
     return localStorage.getItem(storageKey) || "light";
@@ -10,7 +11,7 @@
     document.documentElement.setAttribute("data-bs-theme", theme);
     localStorage.setItem(storageKey, theme);
     for (const button of document.querySelectorAll("[data-theme-toggle]")) {
-      button.textContent = theme === "dark" ? "Mode clair" : "Mode sombre";
+      button.textContent = theme === "dark" ? t("light") : t("dark");
       button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
     }
   }

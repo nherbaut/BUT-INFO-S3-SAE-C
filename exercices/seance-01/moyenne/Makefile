@@ -29,7 +29,7 @@ $(PROGRAM): src/main.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $< $(LDLIBS) -o $@
 
 run: $(PROGRAM)
-	printf "12 14\n" | ./$(PROGRAM)
+	./$(PROGRAM)
 
 test: $(PROGRAM)
 	printf "12 14\n" | ./$(PROGRAM) | grep -q "moyenne = 13"

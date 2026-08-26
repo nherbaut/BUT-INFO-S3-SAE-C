@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive C source-file lesson</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Interactive teaching proof of concept</p>
+        <h1>Let’s have a look at a typical C source file.</h1>
+      </div>
+      <div class="controls" aria-label="Playback controls">
+        <button id="play" type="button">Play</button>
+        <button id="next" type="button">Next</button>
+        <button id="reset" type="button">Reset</button>
+        <label>
+          Speed
+          <select id="speed">
+            <option value="42">slow</option>
+            <option value="22" selected>normal</option>
+            <option value="8">fast</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <section class="lesson" id="lesson">
+      <div class="editor-shell">
+        <div class="editor-titlebar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="filename">cards.c</span>
+          <span id="status" class="status">Ready</span>
+        </div>
+        <div class="editor" id="editor" aria-label="Animated C source code"></div>
+      </div>
+
+      <aside class="notes" aria-label="Commentary">
+        <div class="note-progress"><span id="stepLabel">Start</span><span id="stepCount">0 / 3</span></div>
+        <article class="note-card idle" id="noteCard">
+          <div class="badge" id="noteBadge">•</div>
+          <div>
+            <h2 id="noteTitle">Prepared code, simulated typing</h2>
+            <p id="noteBody">Press Play. The source will appear as if typed live. It pauses automatically at each teaching point.</p>
+          </div>
+        </article>
+        <div id="detailNotes" class="detail-notes" hidden></div>
+        <p class="hint">Space: play/pause · →: next annotation · R: reset</p>
+      </aside>
+
+      <svg class="connector" id="connector" aria-hidden="true">
+        <path id="connectorPath" d=""></path>
+        <circle id="connectorDot" r="4" cx="-10" cy="-10"></circle>
+      </svg>
+    </section>
+  </main>
+
+  <script src="lesson.js"></script>
+</body>
+</html>

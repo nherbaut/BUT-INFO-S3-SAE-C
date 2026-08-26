@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 import html
+import hashlib
 import json
 import re
 import shutil
 import subprocess
 import base64
+import unicodedata
 import zipfile
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 COURSES = ROOT / "cours"
+COURSE_ASSETS = COURSES / "assets"
 EXERCISES = ROOT / "exercices"
 BUILD = ROOT / "build" / "supports"
 PLAYER_SRC = ROOT / "web" / "player"
@@ -18,10 +21,13 @@ PLAYER_DST = BUILD / "player"
 VENDOR_SRC = ROOT / "web" / "vendor"
 VENDOR_DST = BUILD / "vendor"
 CODEMIRROR_INCLUDE = BUILD / "codemirror-include.html"
+TSCC_INCLUDE = BUILD / "tscc-include.html"
 PDF_DST = BUILD / "assets" / "pdf"
 ZIP_DST = BUILD / "assets" / "zip"
+COURSE_ASSETS_DST = BUILD / "assets"
 PDF_FOOTER_TEX = BUILD / "pdf-footer.tex"
 TSCC_RUNTIME = PLAYER_DST / "tscc" / "tscc-runtime.js"
+TYPING_AUDIO_SRC = ROOT / "contributed" / "c-lesson-poc" / "typing.mp3"
 PUBLIC_REPO = "https://github.com/nherbaut/BUT-INFO-S3-SAE-C"
 CREDITS = "Crédits : Nicolas Herbaut, Romain Giot et Pierre Ramet"
 COURSE_INDEX = "index-cours.html"
@@ -29,13 +35,16 @@ FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
 FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 QUIZ_INDEX = "quiz.html"
 QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
+MILESTONES_PAGE = "jalons.html"
+MILESTONES_PATH = COURSES / "jalons.md"
 ADMIN_PAGE = "admin.html"
 LIVE_CODE_PAGE = "live-code.html"
 LIVE_QUIZ_PAGE = "live-quiz.html"
 ADMIN_DIGEST = "$argon2id$v=19$m=65536,t=3,p=4$SDaf4HTJfRAO2wys9QIE7A$bLo2gTmVGol0ogx6vLCsYGPNZbIcqUNWS88ZuJZCgIo"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
-CODE_FENCE_C = re.compile(r"^```\s*c\s*$", re.I)
+CODE_FENCE_C = re.compile(r"^```\s*c(?:\s+\{(?P<attrs>[^}]*)\})?\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
+PLAYBACK_TYPING_ATTR_RE = re.compile(r"(?:^|\s)playback\s*=\s*typing(?:\s|$)", re.I)
 C_MAIN_RE = re.compile(r"\bint\s+main\s*\(", re.S)
 C_STDIN_RE = re.compile(r"\b(?:scanf|getchar|gets)\s*\(|\bfgets\s*\(|\bfscanf\s*\(\s*stdin\b|\bfread\s*\([^;]*\bstdin\b", re.S)
 QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([^}]+)\})?\s*$")
@@ -45,8 +54,24 @@ OPTION_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
 FIELD_RE = re.compile(r"^([A-Za-z_-]+):\s*(.*)$")
 BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.S)
 HEAD_RE = re.compile(r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>", re.S)
+NAVIGATION_RE = re.compile(
+    r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>"
+    r'|<details id="([^"]+)" class="embedded-exercise[^\"]*" data-nav-kind="exercise" data-nav-title="([^"]*)">'
+    r'|<quiz-player id="([^"]+)" data-quiz-b64="[^"]*" data-nav-kind="quiz" data-nav-title="([^"]*)"',
+    re.S,
+)
 TAG_RE = re.compile(r"<[^>]+>")
 TITLE_BLOCK_RE = re.compile(r"<header id=\"title-block-header\">.*?</header>", re.S)
+EXERCISE_PROPOSALS_RE = re.compile(
+    r'<h2 id="(?P<id>[^"]+)">(?P<title>(?:(?!</h2>).)*)</h2>\s*<ul>\s*(?P<items>.*?)\s*</ul>',
+    re.S,
+)
+LIST_ITEM_RE = re.compile(r"<li>(.*?)</li>", re.S)
+
+SESSION_ICON = "&#128218;"
+MILESTONE_ICON = "&#9873;"
+EXERCISE_ICON = "&#128187;"
+QUIZ_ICON = "&#10067;"
 
 
 def read_text(path):
@@ -74,8 +99,31 @@ def codemirror_script_tags():
 <script src="vendor/codemirror/clike.min.js"></script>""".strip()
 
 
+def asset_version(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def tscc_script_tag():
+    bundle = PLAYER_SRC / "tscc" / "tscc-bundle.js"
+    return f'<script src="player/tscc/tscc-bundle.js?v={asset_version(bundle)}"></script>'
+
+
 def write_codemirror_include():
     write_text(CODEMIRROR_INCLUDE, codemirror_script_tags() + "\n")
+
+
+def write_tscc_include():
+    write_text(TSCC_INCLUDE, tscc_script_tag() + "\n")
+
+
+def copy_course_assets():
+    if not COURSE_ASSETS.exists():
+        return
+    for source in COURSE_ASSETS.rglob("*"):
+        if source.is_file():
+            target = COURSE_ASSETS_DST / source.relative_to(COURSE_ASSETS)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
 
 
 def site_footer():
@@ -112,7 +160,13 @@ def write_pdf_footer():
 
 def course_infos():
     infos = []
-    for course in sorted(COURSES.glob("*.md")):
+    course_paths = sorted(
+        COURSES.glob("*.md"),
+        key=lambda path: (path.stem == "bonnes-pratiques", path.name),
+    )
+    for course in course_paths:
+        if course == MILESTONES_PATH:
+            continue
         source = read_text(course)
         title_match = re.search(r"^#\s+(.+)$", source, re.M)
         title = title_match.group(1) if title_match else course.stem
@@ -126,6 +180,18 @@ def course_infos():
             }
         )
     return infos
+
+
+def milestone_infos():
+    source = read_text(MILESTONES_PATH)
+    milestones = []
+    for match in re.finditer(r"^##\s+(.+)$", source, re.M):
+        title = match.group(1)
+        normalized = unicodedata.normalize("NFKD", title)
+        normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+        milestone_id = re.sub(r"[^a-z0-9]", "-", normalized.lower()).strip("-")
+        milestones.append({"title": title, "id": milestone_id})
+    return milestones
 
 
 def load_exercise(path_text):
@@ -314,19 +380,23 @@ def render_html_player(kind, path_text):
     statement = html.escape(exercise.get("statement", ""))
     local_path = html.escape(exercise["path"])
     command = html.escape(exercise["local"]["run"])
-    label = "Demonstration executable" if kind == "c_demo" else "Exercice interactif"
-    browser_label = "Executable dans le navigateur" if exercise["browser_runnable"] else "Local uniquement"
+    label_key = "embeddedExercise.demoLabel" if kind == "c_demo" else "embeddedExercise.interactiveLabel"
+    browser_label_key = "embeddedExercise.browserRunnable" if exercise["browser_runnable"] else "embeddedExercise.localOnly"
     browser_class = "text-bg-success" if exercise["browser_runnable"] else "text-bg-warning"
+    anchor_id = f"exercise-{exercise['id']}"
+    content_kind = "example" if kind == "c_demo" else "exercise"
+    icon = "{}" if content_kind == "example" else "&lt;/&gt;"
     return f"""
-<details class="embedded-exercise card my-4">
+<details id="{html.escape(anchor_id, quote=True)}" class="embedded-exercise embedded-exercise--{content_kind} card my-4" data-nav-kind="exercise" data-nav-title="{html.escape(exercise['title'], quote=True)}">
 <summary class="card-header h5">
-  <span>{label} - {title}</span>
-  <span class="badge {browser_class} ms-2">{browser_label}</span>
+  <span class="content-kind content-kind--{content_kind}"><span class="content-kind__icon" aria-hidden="true">{icon}</span><span data-message="{label_key}"></span></span>
+  <span class="embedded-exercise__title">{title}</span>
+  <span class="badge {browser_class} ms-2" data-message="{browser_label_key}"></span>
 </summary>
 <div class="card-body">
 <p class="card-text">{statement}</p>
-<p class="exercise-local card-text text-body-secondary">Version locale : <code>cd {local_path}</code>, puis <code>{command}</code>.</p>
-<c-player data-readonly="{readonly}" data-exercise-b64="{payload}"></c-player>
+<p class="exercise-local card-text text-body-secondary"><span data-message="embeddedExercise.localVersion"></span> <code>cd {local_path}</code>, <span data-message="embeddedExercise.then"></span> <code>{command}</code>.</p>
+<c-player data-content-kind="{content_kind}" data-readonly="{readonly}" data-exercise-b64="{payload}"></c-player>
 </div>
 </details>
 """
@@ -361,13 +431,27 @@ def render_html_code_example(source, index):
             "uses_stdin": uses_stdin(source),
         }
     )
-    return f'<c-player data-readonly="false" data-exercise-b64="{payload}"></c-player>'
+    return f'<c-player data-content-kind="example" data-readonly="false" data-exercise-b64="{payload}"></c-player>'
+
+
+def render_html_typing_lesson(source, index):
+    lesson_id = f"typing-lesson-{hashlib.sha256(source.encode('utf-8')).hexdigest()[:12]}"
+    payload = encode_data(
+        {
+            "id": lesson_id,
+            "title": "",
+            "source": source,
+        }
+    )
+    return f'<c-typing-player data-content-kind="guided-reading" data-lesson-b64="{payload}"></c-typing-player>'
 
 
 def render_html_quiz(quiz, fold_validated=False):
     payload = encode_data(quiz)
     folded = ' data-fold-validated="true"' if fold_validated else ""
-    return f'<quiz-player data-quiz-b64="{payload}"{folded}></quiz-player>'
+    anchor_id = f"quiz-{quiz['id']}"
+    title = html.escape(quiz["title"], quote=True)
+    return f'<quiz-player id="{html.escape(anchor_id, quote=True)}" data-quiz-b64="{payload}" data-nav-kind="quiz" data-nav-title="{title}"{folded}></quiz-player>'
 
 
 def render_pdf_quiz(quiz, show_answers=True):
@@ -473,7 +557,8 @@ def expand_markdown(source, html_mode):
     code_example_count = 0
     while index < len(lines):
         line = lines[index]
-        if html_mode and CODE_FENCE_C.match(line):
+        code_fence = CODE_FENCE_C.match(line)
+        if code_fence:
             index += 1
             code_lines = []
             while index < len(lines) and not CODE_FENCE_END.match(lines[index]):
@@ -482,10 +567,17 @@ def expand_markdown(source, html_mode):
             if index >= len(lines):
                 raise ValueError("Bloc de code C non ferme")
             index += 1
-            source = "\n".join(code_lines) + "\n"
-            if is_complete_c_program(source):
+            code_source = "\n".join(code_lines) + "\n"
+            if not html_mode:
+                output.append("```c")
+                output.extend(code_lines)
+                output.append("```")
+            elif PLAYBACK_TYPING_ATTR_RE.search(code_fence.group("attrs") or ""):
                 code_example_count += 1
-                output.append(render_html_code_example(source, code_example_count))
+                output.append(render_html_typing_lesson(code_source, code_example_count))
+            elif is_complete_c_program(code_source):
+                code_example_count += 1
+                output.append(render_html_code_example(code_source, code_example_count))
             else:
                 output.append("```c")
                 output.extend(code_lines)
@@ -534,11 +626,17 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
                 "--include-after-body",
                 str(CODEMIRROR_INCLUDE),
                 "--include-after-body",
+                str(PLAYER_DST / "messages.js"),
+                "--include-after-body",
                 str(PLAYER_DST / "c-player.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "c-typing-player.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "quiz-player.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "site-theme.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "exercise-progress.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "ntfy-chat.js"),
                 "-o",
@@ -551,8 +649,8 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
         if PDF_FOOTER_TEX.exists():
             command.extend(["--include-in-header", str(PDF_FOOTER_TEX)])
         command.extend(["-o", str(output_path)])
-        subprocess.run(command, check=True)
-    tmp.unlink()
+        subprocess.run(command, check=True, cwd=BUILD)
+    tmp.unlink(missing_ok=True)
 
 
 def extract_body(document):
@@ -571,6 +669,74 @@ def page_headings(body):
     for level, heading_id, content in HEAD_RE.findall(body):
         headings.append({"level": int(level), "id": heading_id, "title": strip_tags(content)})
     return headings
+
+
+def page_navigation_items(body):
+    items = []
+    for match in NAVIGATION_RE.finditer(body):
+        if match.group(1):
+            level, heading_id, content = match.group(1, 2, 3)
+            if heading_id == "ntfy-chat-group-title":
+                continue
+            items.append({"type": "course", "level": int(level), "id": heading_id, "title": strip_tags(content)})
+        elif match.group(4):
+            items.append(
+                {
+                    "type": "exercise",
+                    "level": 2,
+                    "id": match.group(4),
+                    "title": html.unescape(match.group(5)),
+                }
+            )
+        else:
+            items.append(
+                {
+                    "type": "quiz",
+                    "level": 2,
+                    "id": match.group(6),
+                    "title": html.unescape(match.group(7)),
+                }
+            )
+    return items
+
+
+def is_exercise_proposals_title(title):
+    normalized = unicodedata.normalize("NFKD", strip_tags(title))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return normalized.lower().strip() in {
+        "exercice propose",
+        "exercices propose",
+        "exercice proposes",
+        "exercices proposes",
+    }
+
+
+def render_exercise_proposals(body, scope):
+    def replace(match):
+        if not is_exercise_proposals_title(match.group("title")):
+            return match.group(0)
+        heading_id = match.group("id")
+        items = LIST_ITEM_RE.findall(match.group("items"))
+        if not items:
+            return match.group(0)
+        rendered_items = []
+        for index, item in enumerate(items, start=1):
+            checkbox_id = f"exercise-progress-{heading_id}-{index}"
+            progress_key = f"{scope}:{heading_id}:{index}"
+            rendered_items.append(
+                f'<li class="list-group-item px-0 py-2"><div class="form-check mb-0">'
+                f'<input class="form-check-input" type="checkbox" id="{html.escape(checkbox_id, quote=True)}" data-exercise-progress="{html.escape(progress_key, quote=True)}">'
+                f'<label class="form-check-label" for="{html.escape(checkbox_id, quote=True)}">{item.strip()}</label>'
+                f"</div></li>"
+            )
+        heading = match.group(0).split("</h2>", 1)[0]
+        return f'''<section class="exercise-proposals mb-4" data-exercise-progress-list>
+{heading}</h2>
+<div class="small text-body-secondary mb-2"><span data-exercise-progress-count>0/{len(items)} realise</span></div>
+<ul class="list-group list-group-flush">{''.join(rendered_items)}</ul>
+</section>'''
+
+    return EXERCISE_PROPOSALS_RE.sub(replace, body)
 
 
 def main_nav(active, include_admin=False):
@@ -610,14 +776,20 @@ def left_sidebar(courses, current):
     links = []
     for course in courses:
         active = " active" if course["html"] == current else ""
+        session_icon = SESSION_ICON if course["stem"].startswith("seance-") else ""
         links.append(
-            f'<li class="nav-item"><a class="nav-link{active}" href="{course["html"]}">{html.escape(course["title"])}</a></li>'
+            f'<li class="nav-item"><a class="nav-link{active}" href="{course["html"]}">{nav_icon(session_icon)}{html.escape(course["title"])}</a></li>'
+        )
+    links.append('<li class="nav-sidebar-label text-uppercase small text-body-secondary mt-3 mb-1">Jalons autonomes</li>')
+    for milestone in milestone_infos():
+        links.append(
+            f'<li class="nav-item"><a class="nav-link small" href="{MILESTONES_PAGE}#{milestone["id"]}">{nav_icon(MILESTONE_ICON)}{html.escape(milestone["title"])}</a></li>'
         )
     return f"""
 <aside class="course-sidebar-left col-lg-2">
   <nav class="position-sticky pt-3">
-    <div class="fw-semibold text-uppercase small text-body-secondary mb-2">Seances</div>
-    <ul class="nav nav-pills flex-column">
+    <div class="fw-semibold text-uppercase small text-body-secondary mb-2">Parcours</div>
+    <ul class="nav nav-pills flex-column gap-1">
       {''.join(links)}
     </ul>
   </nav>
@@ -625,18 +797,29 @@ def left_sidebar(courses, current):
 """
 
 
-def right_sidebar(headings):
+def nav_icon(icon):
+    if not icon:
+        return ""
+    return f'<span class="nav-kind-icon" aria-hidden="true">{icon}</span>'
+
+
+def right_sidebar(items):
     links = []
-    for heading in headings:
-        indent = " ps-3" if heading["level"] == 2 else ""
+    icons = {"exercise": EXERCISE_ICON, "quiz": QUIZ_ICON}
+    for item in items:
+        classes = ["nav-link", "py-1"]
+        if item["type"] == "course" and item["level"] == 2:
+            classes.extend(["ps-3", "nav-page-section"])
+        elif item["level"] == 2:
+            classes.extend(["ps-4", "nav-page-interactive"])
         links.append(
-            f'<li class="nav-item"><a class="nav-link py-1{indent}" href="#{heading["id"]}">{html.escape(heading["title"])}</a></li>'
+            f'<li class="nav-item"><a class="{" ".join(classes)}" href="#{item["id"]}">{nav_icon(icons.get(item["type"], ""))}{html.escape(item["title"])}</a></li>'
         )
     return f"""
 <aside class="course-sidebar-right col-lg-2">
   <nav class="position-sticky pt-3">
     <div class="fw-semibold text-uppercase small text-body-secondary mb-2">Dans cette page</div>
-    <ul class="nav nav-pills flex-column small">
+    <ul class="nav nav-pills flex-column gap-1 small">
       {''.join(links)}
     </ul>
   </nav>
@@ -645,7 +828,7 @@ def right_sidebar(headings):
 
 
 def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
-    headings = page_headings(body)
+    navigation_items = page_navigation_items(body)
     actions = []
     if pdf_href:
         actions.append(f'<a class="btn btn-outline-secondary btn-sm" href="{pdf_href}" download>Telecharger le PDF de cette page</a>')
@@ -663,7 +846,7 @@ def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
       {action_block}
       {body}
     </main>
-    {right_sidebar(headings)}
+    {right_sidebar(navigation_items)}
   </div>
 </div>
 {site_footer()}
@@ -672,7 +855,7 @@ def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
 
 def postprocess_doc_page(output_path, courses, current, active, pdf_href=None, zip_href=None):
     document = read_text(output_path)
-    body = TITLE_BLOCK_RE.sub("", extract_body(document)).strip()
+    body = render_exercise_proposals(TITLE_BLOCK_RE.sub("", extract_body(document)).strip(), output_path.stem)
     write_text(output_path, replace_body(document, doc_layout(body, courses, current, active, pdf_href, zip_href)))
 
 
@@ -790,6 +973,7 @@ def landing_page():
 </script>
 {read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
 {codemirror_script_tags()}
+{read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "c-player.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 {read_text(PLAYER_SRC / "ntfy-chat.js")}
@@ -827,6 +1011,7 @@ def live_code_page():
 {site_footer()}
 {read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
 {codemirror_script_tags()}
+{read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "c-player.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
@@ -905,6 +1090,7 @@ def live_quiz_page():
   <section class="card" data-live-quiz-target></section>
 </main>
 {site_footer()}
+{read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
 (() => {{
@@ -1263,6 +1449,7 @@ def admin_page(flow_items, question_bank):
   </div>
 </div>
 {site_footer()}
+{read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "site-theme.js")}
 <script>
 (() => {{
@@ -1870,10 +2057,14 @@ def main():
     BUILD.mkdir(parents=True, exist_ok=True)
     PDF_DST.mkdir(parents=True, exist_ok=True)
     ZIP_DST.mkdir(parents=True, exist_ok=True)
+    copy_course_assets()
     write_pdf_footer()
     if PLAYER_DST.exists():
         shutil.rmtree(PLAYER_DST)
     shutil.copytree(PLAYER_SRC, PLAYER_DST)
+    if not TYPING_AUDIO_SRC.exists():
+        raise FileNotFoundError(f"Audio de frappe absent : {TYPING_AUDIO_SRC}")
+    shutil.copy2(TYPING_AUDIO_SRC, PLAYER_DST / "typing.mp3")
     if VENDOR_DST.exists():
         shutil.rmtree(VENDOR_DST)
     shutil.copytree(VENDOR_SRC, VENDOR_DST)
@@ -1903,6 +2094,10 @@ def main():
 
     run_pandoc(quiz_index_markdown(courses), BUILD / QUIZ_INDEX, True, "Mini-quiz")
     postprocess_doc_page(BUILD / QUIZ_INDEX, courses, QUIZ_INDEX, "quiz", QUIZ_PDF, None)
+
+    milestones_source = read_text(MILESTONES_PATH)
+    run_pandoc(expand_markdown(milestones_source, html_mode=True), BUILD / MILESTONES_PAGE, True, "Jalons autonomes")
+    postprocess_doc_page(BUILD / MILESTONES_PAGE, courses, MILESTONES_PAGE, "course")
 
     admin_flow = []
     for course in courses:
