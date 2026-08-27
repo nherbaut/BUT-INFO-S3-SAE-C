@@ -32,6 +32,7 @@ class CTypingPlayer extends HTMLElement {
   disconnectedCallback() {
     this.stopAudio(true);
     window.clearTimeout(this.timer);
+    window.cancelAnimationFrame(this.followFrame);
   }
 
   parseLesson() {
@@ -219,7 +220,8 @@ class CTypingPlayer extends HTMLElement {
             </div>
           </aside>
         </div>
-        <audio class="c-typing-player__audio" preload="none" loop src="player/typing.mp3"></audio>
+        <audio class="c-typing-player__audio c-typing-player__audio--typing" preload="none" loop src="player/typing.mp3"></audio>
+        <audio class="c-typing-player__audio c-typing-player__audio--matrix" preload="none" loop src="player/matrix.mp3"></audio>
       </section>
     `;
     this.querySelector(".c-typing-player__start").addEventListener("click", () => this.start());
@@ -229,6 +231,8 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__mute").addEventListener("click", () => this.toggleMute());
     this.querySelector(".c-typing-player__comments").addEventListener("click", () => this.toggleComments());
     const code = this.querySelector(".c-typing-player__code");
+    code.addEventListener("pointerup", () => this.copySelectedCode());
+    code.addEventListener("keyup", () => this.copySelectedCode());
     code.addEventListener("mouseover", (event) => this.previewAnnotation(event));
     code.addEventListener("mouseout", (event) => this.clearPreview(event));
     code.addEventListener("focusin", (event) => this.previewAnnotation(event));
@@ -249,6 +253,8 @@ class CTypingPlayer extends HTMLElement {
 
   reset({ showCompleted = false } = {}) {
     window.clearTimeout(this.timer);
+    window.cancelAnimationFrame(this.followFrame);
+    this.followFrame = null;
     this.visible = "";
     this.stepIndex = 0;
     this.typing = false;
@@ -257,6 +263,7 @@ class CTypingPlayer extends HTMLElement {
     this.showCComments = false;
     this.hoveredStepIndex = null;
     this.pinnedStepIndex = null;
+    this.audioMode = null;
     this.stopAudio(true);
     this.render();
     if (showCompleted) {
@@ -377,7 +384,6 @@ class CTypingPlayer extends HTMLElement {
     this.typing = true;
     this.setStatus(this.t("typing"));
     this.querySelector(".c-typing-player__play").textContent = this.t("pause");
-    this.startAudio();
     this.tick();
   }
 
@@ -412,11 +418,34 @@ class CTypingPlayer extends HTMLElement {
       return;
     }
     const character = this.source[this.visible.length];
+    const audioMode = this.audioModeForIndex(this.visible.length);
+    this.startAudio(audioMode);
     this.visible += character;
     this.updateCode();
     const speed = Number(this.querySelector(".c-typing-player__speed").value);
-    const delay = character === "\n" ? speed * 2.6 : /[;{}]/.test(character) ? speed * 1.6 : speed;
+    const delay = audioMode === "matrix"
+      ? Math.max(3, character === "\n" ? speed * 0.3 : speed * 0.15)
+      : audioMode === "silent"
+        ? Math.max(3, speed * 0.2)
+        : character === "\n" ? speed * 2.6 : /[;{}]/.test(character) ? speed * 1.6 : speed;
     this.timer = window.setTimeout(() => this.tick(), delay);
+  }
+
+  audioModeForIndex(index) {
+    if (this.language !== "bash") {
+      return "typing";
+    }
+    const lineStart = this.source.lastIndexOf("\n", index - 1) + 1;
+    const lineEnd = this.source.indexOf("\n", index);
+    const line = this.source.slice(lineStart, lineEnd === -1 ? this.source.length : lineEnd);
+    if (!line.trim()) {
+      return "silent";
+    }
+    return this.isBashPrompt(line) ? "typing" : "matrix";
+  }
+
+  isBashPrompt(line) {
+    return /^[^\r\n]*[#$]\s/.test(line);
   }
 
   nextTarget() {
@@ -477,6 +506,73 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__code").innerHTML = code;
     canvas.classList.toggle("c-typing-player__canvas--empty", this.visible.length === 0);
     canvas.scrollTop = canvas.scrollHeight;
+    this.followTypedLine();
+  }
+
+  followTypedLine() {
+    if (!this.typing || this.followFrame) {
+      return;
+    }
+
+    this.followFrame = window.requestAnimationFrame(() => {
+      this.followFrame = null;
+      if (!this.typing) {
+        return;
+      }
+
+      const line = this.querySelector(".c-typing-player__line:last-child");
+      if (!line || line.getBoundingClientRect().bottom <= window.innerHeight - 24) {
+        return;
+      }
+
+      line.scrollIntoView({ block: "end", behavior: "smooth" });
+    });
+  }
+
+  copySelectedCode() {
+    const code = this.querySelector(".c-typing-player__code");
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const withinCode = (node) => code.contains(node.nodeType === Node.ELEMENT_NODE ? node : node.parentNode);
+    if (!withinCode(range.startContainer) || !withinCode(range.endContainer)) {
+      return;
+    }
+
+    const fragment = range.cloneContents();
+    fragment.querySelectorAll(".c-typing-player__line-number").forEach((lineNumber) => lineNumber.remove());
+    const lines = Array.from(fragment.querySelectorAll(".c-typing-player__line"));
+    const text = lines.length > 0 ? lines.map((line) => line.textContent).join("\n") : fragment.textContent;
+    if (!text) {
+      return;
+    }
+
+    const copied = () => this.setStatus(this.t("codeCopied"));
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(copied).catch(() => this.copyTextFallback(text, copied));
+      return;
+    }
+    this.copyTextFallback(text, copied);
+  }
+
+  copyTextFallback(text, copied) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const success = document.execCommand("copy");
+    textarea.remove();
+    if (success) {
+      copied();
+    } else {
+      this.setStatus(this.t("codeCopyFailed"));
+    }
   }
 
   updateCommentedCode() {
@@ -612,21 +708,35 @@ class CTypingPlayer extends HTMLElement {
     button.setAttribute("title", label);
     button.setAttribute("aria-pressed", String(muted));
     if (muted) this.stopAudio(false);
-    else if (this.typing) this.startAudio();
+    else if (this.typing) this.startAudio(this.audioModeForIndex(this.visible.length));
   }
 
-  startAudio() {
-    if (localStorage.getItem(this.audioKey) === "true") return;
-    const audio = this.querySelector(".c-typing-player__audio");
+  startAudio(mode) {
+    if (localStorage.getItem(this.audioKey) === "true" || mode === "silent") {
+      this.stopAudio(false);
+      return;
+    }
+    const typingAudio = this.querySelector(".c-typing-player__audio--typing");
+    const matrixAudio = this.querySelector(".c-typing-player__audio--matrix");
+    const audio = mode === "matrix" ? matrixAudio : typingAudio;
+    const other = mode === "matrix" ? typingAudio : matrixAudio;
+    if (this.audioMode !== mode) {
+      other.pause();
+      other.currentTime = 0;
+      this.audioMode = mode;
+    }
     audio.volume = 0.2;
-    audio.play().catch(() => {});
+    if (audio.paused) {
+      audio.play().catch(() => {});
+    }
   }
 
   stopAudio(rewind) {
-    const audio = this.querySelector(".c-typing-player__audio");
-    if (!audio) return;
-    audio.pause();
-    if (rewind) audio.currentTime = 0;
+    for (const audio of this.querySelectorAll(".c-typing-player__audio")) {
+      audio.pause();
+      if (rewind) audio.currentTime = 0;
+    }
+    this.audioMode = null;
   }
 
   setStatus(text) {

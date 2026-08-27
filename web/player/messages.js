@@ -81,6 +81,8 @@ completedWithErrors: [
       cCommentsBody: "Le code complet et ses commentaires C sont affiches.",
       ready: "",
       canvasLabel: "Code C anime",
+      codeCopied: "Code copié.",
+      codeCopyFailed: "Impossible de copier le code.",
       annotationAria: "Afficher le commentaire : {title}",
       start: "Demarrer l'animation",
     initialStep: "{total} Étapes",

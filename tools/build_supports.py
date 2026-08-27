@@ -28,6 +28,7 @@ COURSE_ASSETS_DST = BUILD / "assets"
 PDF_FOOTER_TEX = BUILD / "pdf-footer.tex"
 TSCC_RUNTIME = PLAYER_DST / "tscc" / "tscc-runtime.js"
 TYPING_AUDIO_SRC = ROOT / "contributed" / "c-lesson-poc" / "typing.mp3"
+MATRIX_AUDIO_SRC = ROOT / "contributed" / "c-lesson-poc" / "matrix.mp3"
 PUBLIC_REPO = "https://github.com/nherbaut/BUT-INFO-S3-SAE-C"
 CREDITS = "Crédits : Nicolas Herbaut, Romain Giot et Pierre Ramet"
 COURSE_INDEX = "index-cours.html"
@@ -2068,6 +2069,9 @@ def main():
     if not TYPING_AUDIO_SRC.exists():
         raise FileNotFoundError(f"Audio de frappe absent : {TYPING_AUDIO_SRC}")
     shutil.copy2(TYPING_AUDIO_SRC, PLAYER_DST / "typing.mp3")
+    if not MATRIX_AUDIO_SRC.exists():
+        raise FileNotFoundError(f"Audio d'imprimante matricielle absent : {MATRIX_AUDIO_SRC}")
+    shutil.copy2(MATRIX_AUDIO_SRC, PLAYER_DST / "matrix.mp3")
     if VENDOR_DST.exists():
         shutil.rmtree(VENDOR_DST)
     shutil.copytree(VENDOR_SRC, VENDOR_DST)

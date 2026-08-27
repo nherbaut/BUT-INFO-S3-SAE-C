@@ -1,6 +1,6 @@
 CC ?= cc
 CPPFLAGS ?= -Iinclude -Iprovided/cjson $(shell pkg-config --cflags libcurl)
-CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -g
 LDFLAGS ?=
 LDLIBS ?= -lm $(shell pkg-config --libs libcurl)
 

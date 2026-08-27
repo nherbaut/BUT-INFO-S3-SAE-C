@@ -18,12 +18,86 @@ pendant le clonage, la compilation et l'execution.
 
 La fiche autonome demande d'executer les commandes suivantes avant la seance :
 
-```bash
-git clone https://github.com/nherbaut/BUT-INFO-S3-SAE-C.git
-cd BUT-INFO-S3-SAE-C
-make
-make test
-make capteurs
+```bash {playback=typing}
+## Clone du projet
+# à partir de gitlab
+(base) nherbaut@ares:~/tmp$ git clone https://github.com/nherbaut/BUT-INFO-S3-SAE-C.git
+##
+
+Cloning into 'BUT-INFO-S3-SAE-C'...
+remote: Enumerating objects: 468, done.
+remote: Counting objects: 100% (468/468), done.
+remote: Compressing objects: 100% (311/311), done.
+remote: Total 468 (delta 167), reused 409 (delta 109), pack-reused 0 (from 0)
+Receiving objects: 100% (468/468), 2.78 MiB | 11.39 MiB/s, done.
+Resolving deltas: 100% (167/167), done.
+
+## ouvrir le projet
+# On ouvre le répertoire du projet
+(base) nherbaut@ares:~/tmp$ cd BUT-INFO-S3-SAE-C/projet/capteurs-starter/
+##
+
+## Utilisation du Makefile
+# l'outil make utilise le fichier Makefile pour savoir comment réaliser toutes les opérations du cycle de développement. Compilation, exécution de test, lancement du programme, vérification de la mémoire...
+# l'argument passé à make est appelé une **target**. 
+# Ici, la target `build/capteurs` construit le projet
+(base) nherbaut@ares:~/tmp/BUT-INFO-S3-SAE-C/projet/capteurs-starter$ make build/capteurs
+##
+
+mkdir -p build
+
+## Exécution du préprocesseur et compilation au stade objet.
+# Cette série de commandes exécutée par le Makefile réalise deux opérations en un seule commande
+# 1/ le préprocesseur. Celui-ci modifie le code source en utilisant les directives telles que #ifdef #define...
+# 2/ la compilation au stade objet. Le code C est transformé en code machine non exécutable et en symboles en attente de liaison
+cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c src/main.c -o build/main.o
+##
+## Détail d'une commande de compilation
+# Ici, on appelle le compilateur (via son alias cc)
+cc \
+##
+## Headers
+# Ici, on spécifie quels sont les répertoire contenant les headers c (*.h)
+-Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu \
+##
+## Options de compilation
+# Ici, on spécifie le standard C à utiliser (C11), et le niveau de Warning retourné:
+# all: tous les warning
+# extra: encore plus de warning
+# pedantic: respect strict du standard C
+-std=c11 -Wall -Wextra -Wpedantic\
+##
+## Spécification du source
+# Le source est ensuite passé à l'aide de l'option -c
+-c src/series.c\
+##
+## Specification de la cible
+# Le fichier objet cible à créer est ensuite indiqué
+-o build/series.o
+##
+## *.c => *.c
+# Pour chaque fichier sources l'opération est répétée
+cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c src/statistics.c -o build/statistics.o
+cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c provided/sensor_source.c -o build/sensor_source.o
+cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c src/report.c -o build/report.o
+cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c provided/cjson/cJSON.c -o build/cJSON.o
+##
+
+## Edition de liens
+# Dernière étape de la compilation, le linker prend les fichiers objets produits (*.o), les librairies tières pour générer un exécutable unique.
+cc \
+## 
+## On commence par les objets
+build/main.o build/series.o build/statistics.o build/sensor_source.o build/report.o build/cJSON.o\
+##
+## Puis les librairies tierces (ici, math et curl)
+-lm -lcurl  \
+##
+## Et on finit par spécifier le nom de l'exécutable
+-o build/capteurs
+## 
+
+
 ```
 
 La seance ne refait pas ces etapes pas a pas: elle aide a comprendre et corriger
