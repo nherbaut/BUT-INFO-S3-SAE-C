@@ -1,5 +1,7 @@
 <script>
 class QuizPlayer extends HTMLElement {
+  static progressStorageKey = "sae-c.quiz.progress.v1";
+
   t(key, values) {
     return window.SAECMessages.t(`quiz.${key}`, values);
   }
@@ -10,6 +12,19 @@ class QuizPlayer extends HTMLElement {
     this.shuffleRound = 0;
     this.restartMode = false;
     this.render();
+    this.onPageShow = () => this.refreshProgress();
+    this.onStorage = (event) => {
+      if (event.key === QuizPlayer.progressStorageKey) {
+        this.refreshProgress();
+      }
+    };
+    window.addEventListener("pageshow", this.onPageShow);
+    window.addEventListener("storage", this.onStorage);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("pageshow", this.onPageShow);
+    window.removeEventListener("storage", this.onStorage);
   }
 
   parseQuiz() {
@@ -195,7 +210,19 @@ class QuizPlayer extends HTMLElement {
   }
 
   writeProgress() {
-    localStorage.setItem("sae-c.quiz.progress.v1", JSON.stringify(this.progress));
+    const progress = this.readProgress();
+    progress[this.quiz.id] = this.progress[this.quiz.id];
+    this.progress = progress;
+    localStorage.setItem(QuizPlayer.progressStorageKey, JSON.stringify(progress));
+  }
+
+  refreshProgress() {
+    const previous = JSON.stringify(this.quizProgress());
+    this.progress = this.readProgress();
+    if (JSON.stringify(this.quizProgress()) !== previous) {
+      this.restartMode = false;
+      this.render();
+    }
   }
 
   shuffle(values, seedText) {

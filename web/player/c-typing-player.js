@@ -14,14 +14,17 @@ class CTypingPlayer extends HTMLElement {
       const parsed = this.parseAnnotatedSource(this.lesson.source || "");
       this.source = parsed.source;
       this.steps = parsed.steps;
+      this.commentedSource = (this.lesson.source || "").replace(/\/\*\*\s*\*\//g, "");
       this.lessonError = "";
     } catch (error) {
       this.source = "";
       this.steps = [];
+      this.commentedSource = "";
       this.lessonError = error.message || String(error);
     }
     this.audioKey = "sae-c.typing-player.muted.v1";
     this.completionKey = "sae-c.typing-player.completed.v1";
+    this.commentsKey = "sae-c.typing-player.c-comments.v1";
     this.reset({ showCompleted: this.wasCompleted() });
   }
 
@@ -134,8 +137,8 @@ class CTypingPlayer extends HTMLElement {
               <option value="18" selected>${this.escape(this.t("speedNormal"))}</option>
               <option value="7">${this.escape(this.t("speedFast"))}</option>
             </select>
-            <button class="btn btn-outline-secondary btn-sm c-typing-player__mute" type="button" aria-pressed="${muted}">${this.escape(this.t(muted ? "soundMuted" : "soundActive"))}</button>
-            <button class="btn btn-outline-secondary btn-sm c-typing-player__reset" type="button" disabled>${this.escape(this.t("reset"))}</button>
+            <button class="btn btn-outline-secondary btn-sm c-typing-player__icon-button c-typing-player__mute" type="button" aria-label="${this.escape(this.t(muted ? "soundMuted" : "soundActive"))}" title="${this.escape(this.t(muted ? "soundMuted" : "soundActive"))}" aria-pressed="${muted}">${muted ? "🔇" : "🔊"}</button>
+            <button class="btn btn-outline-secondary btn-sm c-typing-player__icon-button c-typing-player__reset" type="button" aria-label="${this.escape(this.t("reset"))}" title="${this.escape(this.t("reset"))}" disabled>↺</button>
           </div>
         </header>
         <div class="c-typing-player__status" aria-live="polite">${this.escape(this.t("ready"))}</div>
@@ -151,6 +154,7 @@ class CTypingPlayer extends HTMLElement {
             <div class="c-typing-player__note-actions">
               <button class="btn btn-primary btn-sm c-typing-player__play" type="button" hidden>${this.escape(this.t("play"))}</button>
               <button class="btn btn-outline-primary btn-sm c-typing-player__next" type="button" hidden>${this.escape(this.t("next"))}</button>
+              <button class="btn btn-outline-secondary btn-sm c-typing-player__comments" type="button" hidden></button>
             </div>
           </aside>
         </div>
@@ -162,6 +166,7 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__next").addEventListener("click", () => this.next());
     this.querySelector(".c-typing-player__reset").addEventListener("click", () => this.reset());
     this.querySelector(".c-typing-player__mute").addEventListener("click", () => this.toggleMute());
+    this.querySelector(".c-typing-player__comments").addEventListener("click", () => this.toggleComments());
     const code = this.querySelector(".c-typing-player__code");
     code.addEventListener("mouseover", (event) => this.previewAnnotation(event));
     code.addEventListener("mouseout", (event) => this.clearPreview(event));
@@ -188,6 +193,7 @@ class CTypingPlayer extends HTMLElement {
     this.typing = false;
     this.pausedAtStep = false;
     this.completed = false;
+    this.showCComments = false;
     this.hoveredStepIndex = null;
     this.pinnedStepIndex = null;
     this.stopAudio(true);
@@ -216,11 +222,31 @@ class CTypingPlayer extends HTMLElement {
     }
   }
 
+  prefersCComments() {
+    try {
+      const preferences = JSON.parse(localStorage.getItem(this.commentsKey) || "{}");
+      return preferences[this.lesson.id] === true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  saveCCommentsPreference() {
+    try {
+      const preferences = JSON.parse(localStorage.getItem(this.commentsKey) || "{}");
+      preferences[this.lesson.id] = this.showCComments;
+      localStorage.setItem(this.commentsKey, JSON.stringify(preferences));
+    } catch (_error) {
+      // The player remains usable if localStorage is unavailable.
+    }
+  }
+
   showCompleted() {
     this.visible = this.source;
     this.stepIndex = this.steps.length;
     this.completed = true;
     this.pinnedStepIndex = null;
+    this.showCComments = this.prefersCComments();
     this.noteState = {
       step: this.t("completeStep", { total: this.steps.length }),
       title: this.t("completeTitle"),
@@ -232,8 +258,36 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__play").hidden = false;
     this.querySelector(".c-typing-player__play").textContent = this.t("replay");
     this.querySelector(".c-typing-player__next").hidden = true;
+    this.querySelector(".c-typing-player__comments").hidden = false;
+    this.updateCommentsButton();
     this.setStatus(this.t("completed"));
     this.updateCode();
+  }
+
+  toggleComments() {
+    if (!this.completed) {
+      return;
+    }
+    this.showCComments = !this.showCComments;
+    this.saveCCommentsPreference();
+    this.updateCommentsButton();
+    if (this.showCComments) {
+      this.renderNote({
+        step: this.t("completeStep", { total: this.steps.length }),
+        title: this.t("cCommentsTitle"),
+        body: this.t("cCommentsBody"),
+      });
+    } else {
+      this.renderNote(this.noteState);
+    }
+    this.updateCode();
+  }
+
+  updateCommentsButton() {
+    const button = this.querySelector(".c-typing-player__comments");
+    const label = this.t(this.showCComments ? "showGuidedReading" : "showCComments");
+    button.textContent = label;
+    button.setAttribute("aria-pressed", String(this.showCComments));
   }
 
   start() {
@@ -331,12 +385,18 @@ class CTypingPlayer extends HTMLElement {
       this.renderNote(this.noteState);
       this.querySelector(".c-typing-player__play").textContent = this.t("replay");
       this.querySelector(".c-typing-player__next").hidden = true;
+      this.querySelector(".c-typing-player__comments").hidden = false;
+      this.updateCommentsButton();
       this.setStatus(this.t("completed"));
     }
     this.updateCode();
   }
 
   updateCode() {
+    if (this.showCComments) {
+      this.updateCommentedCode();
+      return;
+    }
     const lines = this.visible.split("\n");
     const code = lines.map((line, index) => {
       const number = index + 1;
@@ -356,6 +416,18 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__code").innerHTML = code;
     canvas.classList.toggle("c-typing-player__canvas--empty", this.visible.length === 0);
     canvas.scrollTop = canvas.scrollHeight;
+  }
+
+  updateCommentedCode() {
+    const lines = this.commentedSource.split("\n");
+    const code = lines.map((line, index) => {
+      const number = index + 1;
+      return `<span class="c-typing-player__line"><span class="c-typing-player__line-number">${number}</span><span>${this.highlight(line)}</span></span>`;
+    }).join("");
+    const canvas = this.querySelector(".c-typing-player__canvas");
+    this.querySelector(".c-typing-player__code").innerHTML = code;
+    canvas.classList.remove("c-typing-player__canvas--empty");
+    canvas.scrollTop = 0;
   }
 
   annotationIndexForLine(number) {
@@ -451,8 +523,12 @@ class CTypingPlayer extends HTMLElement {
   toggleMute() {
     const muted = localStorage.getItem(this.audioKey) !== "true";
     localStorage.setItem(this.audioKey, String(muted));
-    this.querySelector(".c-typing-player__mute").textContent = this.t(muted ? "soundMuted" : "soundActive");
-    this.querySelector(".c-typing-player__mute").setAttribute("aria-pressed", String(muted));
+    const button = this.querySelector(".c-typing-player__mute");
+    const label = this.t(muted ? "soundMuted" : "soundActive");
+    button.textContent = muted ? "🔇" : "🔊";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+    button.setAttribute("aria-pressed", String(muted));
     if (muted) this.stopAudio(false);
     else if (this.typing) this.startAudio();
   }
