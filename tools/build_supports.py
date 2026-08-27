@@ -1620,11 +1620,15 @@ def admin_page(flow_items, question_bank):
   const resultsActions = document.querySelector("[data-results-actions]");
   const preview = document.querySelector("[data-admin-preview]");
   const previewContainer = document.querySelector(".admin-mirror__preview");
+  const resultsModalHome = resultsModal.parentNode;
+  const resultsModalAnchor = document.createComment("admin-results-modal-home");
   const previewFrame = document.querySelector("[data-admin-preview-frame]");
   const previewTitle = document.querySelector("[data-preview-title]");
   const previewSubtitle = document.querySelector("[data-preview-subtitle]");
   const chatMessages = document.querySelector("[data-admin-chat-messages]");
   const chatInput = document.querySelector("[data-admin-chat-input]");
+
+  resultsModalHome.insertBefore(resultsModalAnchor, resultsModal);
 
   function setStatus(kind, message) {{
     status.hidden = false;
@@ -1715,7 +1719,18 @@ def admin_page(flow_items, question_bank):
   function updateFullscreenButton() {{
     const button = document.querySelector("[data-preview-fullscreen]");
     const active = document.fullscreenElement === previewContainer;
+    syncResultsModalFullscreen(active);
     button.textContent = active ? "Quitter plein ecran" : "Plein ecran";
+  }}
+
+  function syncResultsModalFullscreen(isPreviewFullscreen = document.fullscreenElement === previewContainer) {{
+    if (isPreviewFullscreen && resultsModal.parentNode !== previewContainer) {{
+      previewContainer.append(resultsModal);
+      return;
+    }}
+    if (!isPreviewFullscreen && resultsModal.parentNode !== resultsModalHome) {{
+      resultsModalAnchor.after(resultsModal);
+    }}
   }}
 
   async function togglePreviewFullscreen() {{
@@ -1977,6 +1992,7 @@ def admin_page(flow_items, question_bank):
 
   function openResultsModal(mode) {{
     if (!activeQuiz) return;
+    syncResultsModalFullscreen();
     const session = activeSession() || {{ answers: [] }};
     const correctAnswers = session.answers.filter((answer) => answer.correct);
     resultsModal.hidden = false;
