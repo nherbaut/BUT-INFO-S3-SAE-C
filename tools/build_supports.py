@@ -173,17 +173,16 @@ def write_pdf_footer():
         r"""
 \usepackage{fancyhdr}
 \usepackage[most]{tcolorbox}
-\usepackage{fontawesome5}
 \usepackage{etoolbox}
 \newenvironment{saecadmonition}[1]{
   \def\saecadmonitioncolor{blue}
-  \def\saecadmonitionicon{\faTasks}
+  \def\saecadmonitionicon{\ensuremath{\square}}
   \def\saecadmonitiontitle{Action a r\'ealiser}
-  \ifstrequal{#1}{trap}{\def\saecadmonitioncolor{orange}\def\saecadmonitionicon{\faExclamationCircle}\def\saecadmonitiontitle{Pi\`ege}}{}
-  \ifstrequal{#1}{warning}{\def\saecadmonitioncolor{red}\def\saecadmonitionicon{\faExclamationTriangle}\def\saecadmonitiontitle{Attention}}{}
-  \ifstrequal{#1}{remember}{\def\saecadmonitioncolor{blue}\def\saecadmonitionicon{\faKey}\def\saecadmonitiontitle{A retenir}}{}
-  \ifstrequal{#1}{tip}{\def\saecadmonitioncolor{green}\def\saecadmonitionicon{\faLightbulb}\def\saecadmonitiontitle{Conseil}}{}
-  \ifstrequal{#1}{technical}{\def\saecadmonitioncolor{gray}\def\saecadmonitionicon{\faCogs}\def\saecadmonitiontitle{Point technique}}{}
+  \ifstrequal{#1}{trap}{\def\saecadmonitioncolor{orange}\def\saecadmonitionicon{\ensuremath{\triangle}}\def\saecadmonitiontitle{Pi\`ege}}{}
+  \ifstrequal{#1}{warning}{\def\saecadmonitioncolor{red}\def\saecadmonitionicon{\textbf{!}}\def\saecadmonitiontitle{Attention}}{}
+  \ifstrequal{#1}{remember}{\def\saecadmonitioncolor{blue}\def\saecadmonitionicon{\ensuremath{\star}}\def\saecadmonitiontitle{A retenir}}{}
+  \ifstrequal{#1}{tip}{\def\saecadmonitioncolor{green}\def\saecadmonitionicon{\ensuremath{+}}\def\saecadmonitiontitle{Conseil}}{}
+  \ifstrequal{#1}{technical}{\def\saecadmonitioncolor{gray}\def\saecadmonitionicon{\ensuremath{\diamond}}\def\saecadmonitiontitle{Point technique}}{}
   \begin{tcolorbox}[colback=\saecadmonitioncolor!7,colframe=\saecadmonitioncolor!65!black,boxrule=0.6pt,arc=2pt,title={\saecadmonitionicon\quad\saecadmonitiontitle}]
 }{\end{tcolorbox}}
 \pagestyle{fancy}
