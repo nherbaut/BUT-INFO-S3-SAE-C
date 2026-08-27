@@ -5,19 +5,15 @@ int main(void)
 {
     int a;
     int b;
-    int c;
     int max;
 
-    scanf("%d %d %d", &a, &b, &c);
+    scanf("%d %d", &a, &b);
 
     max = a;
     if (b > max) {
         max = b;
     }
-    if (c > max) {
-        max = c;
-    }
-
+    
     printf("max = %d\n", max);
     return 0;
 }
