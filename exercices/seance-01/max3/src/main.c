@@ -13,7 +13,7 @@ int main(void)
     if (b > max) {
         max = b;
     }
-    
+
     printf("max = %d\n", max);
     return 0;
 }

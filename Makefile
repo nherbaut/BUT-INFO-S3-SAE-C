@@ -7,6 +7,10 @@ EXERCISES := \
 	exercices/seance-03/etudiants \
 	exercices/seance-04/tableau-dynamique
 
+# Certains starters sont volontairement incomplets et sont validés par les
+# étudiants pendant le cours ; ils ne font pas partie de la CI du dépôt.
+TEST_EXERCISES := $(filter-out exercices/seance-01/max3,$(EXERCISES))
+
 PROJECT := projet/starter
 SENSORS_PROJECT := projet/capteurs-starter
 COURSES := $(wildcard cours/*.md)
@@ -28,7 +32,7 @@ run:
 	set -e; for dir in $(EXERCISES) $(PROJECT); do $(MAKE) -C $$dir run; done
 
 test:
-	set -e; for dir in $(EXERCISES) $(PROJECT); do $(MAKE) -C $$dir test; done
+	set -e; for dir in $(TEST_EXERCISES) $(PROJECT); do $(MAKE) -C $$dir test; done
 
 memcheck:
 	set -e; for dir in $(EXERCISES) $(PROJECT); do $(MAKE) -C $$dir memcheck; done
