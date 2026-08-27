@@ -10,11 +10,12 @@ class CTypingPlayer extends HTMLElement {
 
   connectedCallback() {
     this.lesson = this.parseLesson();
+    this.language = this.lesson.language || "c";
     try {
       const parsed = this.parseAnnotatedSource(this.lesson.source || "");
       this.source = parsed.source;
       this.steps = parsed.steps;
-      this.commentedSource = (this.lesson.source || "").replace(/\/\*\*\s*\*\//g, "");
+      this.commentedSource = this.commentSource(this.lesson.source || "");
       this.lessonError = "";
     } catch (error) {
       this.source = "";
@@ -39,6 +40,9 @@ class CTypingPlayer extends HTMLElement {
   }
 
   parseAnnotatedSource(source) {
+    if (this.language === "bash") {
+      return this.parseBashAnnotatedSource(source);
+    }
     const steps = [];
     const matcher = /\/\*\*([\s\S]*?)\*\//g;
     let cursor = 0;
@@ -107,6 +111,63 @@ class CTypingPlayer extends HTMLElement {
         lines: [this.lineAt(visibleSource, step.start), this.lineAt(visibleSource, Math.max(step.start, step.until - 1))],
       })),
     };
+  }
+
+  parseBashAnnotatedSource(source) {
+    const steps = [];
+    const visibleLines = [];
+    let annotation = null;
+
+    for (const line of source.split(/\r?\n/)) {
+      const marker = line.match(/^##(?:\s+(.*?))?\s*$/);
+      if (marker) {
+        const title = (marker[1] || "").trim();
+        if (title) {
+          if (annotation) {
+            throw new Error(this.t("nestedBashAnnotation", { title: annotation.title }));
+          }
+          annotation = { title, body: [], start: visibleLines.join("\n").length };
+        } else {
+          if (!annotation) {
+            throw new Error(this.t("noOpenBashAnnotation"));
+          }
+          const visibleSource = visibleLines.join("\n");
+          const end = visibleSource.replace(/\n+$/, "").length;
+          if (end <= annotation.start) {
+            throw new Error(this.t("emptyBashAnnotation", { title: annotation.title }));
+          }
+          steps.push({ ...annotation, body: annotation.body.join("\n").trim(), until: end, colorIndex: steps.length % 6 });
+          annotation = null;
+        }
+        continue;
+      }
+      const comment = annotation ? line.match(/^#(?: ?(.*))?$/) : null;
+      if (comment) {
+        annotation.body.push(comment[1] || "");
+        continue;
+      }
+      visibleLines.push(line);
+    }
+
+    if (annotation) {
+      throw new Error(this.t("unclosedBashAnnotation", { title: annotation.title }));
+    }
+
+    const visibleSource = visibleLines.join("\n");
+    return {
+      source: visibleSource,
+      steps: steps.map((step) => ({
+        ...step,
+        lines: [this.lineAt(visibleSource, step.start), this.lineAt(visibleSource, Math.max(step.start, step.until - 1))],
+      })),
+    };
+  }
+
+  commentSource(source) {
+    if (this.language === "bash") {
+      return source.replace(/^##\s*$/gm, "");
+    }
+    return source.replace(/\/\*\*\s*\*\//g, "");
   }
 
   lineAt(source, index) {
@@ -503,6 +564,9 @@ class CTypingPlayer extends HTMLElement {
   }
 
   highlight(line) {
+    if (this.language === "bash") {
+      return this.highlightBash(line);
+    }
     const pattern = /(\/\/.*|\/\*.*?\*\/|"(?:\\.|[^"\\])*"|^\s*#.*|\b(?:int|void|return|if|else|for|while|const|static)\b|\b(?:0[xX][0-9a-fA-F]+|\d+)\b)/g;
     let cursor = 0;
     let result = "";
@@ -514,6 +578,24 @@ class CTypingPlayer extends HTMLElement {
       else if (token.startsWith('"')) kind = "string";
       else if (/^\s*#/.test(token)) kind = "preproc";
       else if (/^\d|^0x/i.test(token)) kind = "number";
+      result += `<span class="c-token c-token--${kind}">${this.escape(token)}</span>`;
+      cursor = match.index + token.length;
+    }
+    return result + this.escape(line.slice(cursor));
+  }
+
+  highlightBash(line) {
+    const pattern = /#.*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|\b(?:cd|echo|printf|mkdir|rm|cp|mv|curl|make|gcc|clang|git|cat|head|tail|grep|rg|if|then|fi|for|in|do|done|while|case|esac)\b|--?[A-Za-z][A-Za-z0-9-]*/g;
+    let cursor = 0;
+    let result = "";
+    for (const match of line.matchAll(pattern)) {
+      result += this.escape(line.slice(cursor, match.index));
+      const token = match[0];
+      let kind = "keyword";
+      if (token.startsWith("#")) kind = "comment";
+      else if (token.startsWith('"') || token.startsWith("'")) kind = "string";
+      else if (token.startsWith("$")) kind = "constant";
+      else if (token.startsWith("-")) kind = "preproc";
       result += `<span class="c-token c-token--${kind}">${this.escape(token)}</span>`;
       cursor = match.index + token.length;
     }

@@ -42,7 +42,7 @@ LIVE_CODE_PAGE = "live-code.html"
 LIVE_QUIZ_PAGE = "live-quiz.html"
 ADMIN_DIGEST = "$argon2id$v=19$m=65536,t=3,p=4$SDaf4HTJfRAO2wys9QIE7A$bLo2gTmVGol0ogx6vLCsYGPNZbIcqUNWS88ZuJZCgIo"
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
-CODE_FENCE_C = re.compile(r"^```\s*c(?:\s+\{(?P<attrs>[^}]*)\})?\s*$", re.I)
+CODE_FENCE = re.compile(r"^```\s*(?P<language>c|bash)(?:\s+\{(?P<attrs>[^}]*)\})?\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
 PLAYBACK_TYPING_ATTR_RE = re.compile(r"(?:^|\s)playback\s*=\s*typing(?:\s|$)", re.I)
 C_MAIN_RE = re.compile(r"\bint\s+main\s*\(", re.S)
@@ -434,12 +434,14 @@ def render_html_code_example(source, index):
     return f'<c-player data-content-kind="example" data-readonly="false" data-exercise-b64="{payload}"></c-player>'
 
 
-def render_html_typing_lesson(source, index):
-    lesson_id = f"typing-lesson-{hashlib.sha256(source.encode('utf-8')).hexdigest()[:12]}"
+def render_html_typing_lesson(source, index, language):
+    lesson_hash = hashlib.sha256(f"{language}\0{source}".encode("utf-8")).hexdigest()[:12]
+    lesson_id = f"typing-lesson-{lesson_hash}"
     payload = encode_data(
         {
             "id": lesson_id,
             "title": "",
+            "language": language,
             "source": source,
         }
     )
@@ -557,8 +559,9 @@ def expand_markdown(source, html_mode):
     code_example_count = 0
     while index < len(lines):
         line = lines[index]
-        code_fence = CODE_FENCE_C.match(line)
+        code_fence = CODE_FENCE.match(line)
         if code_fence:
+            language = code_fence.group("language").lower()
             index += 1
             code_lines = []
             while index < len(lines) and not CODE_FENCE_END.match(lines[index]):
@@ -569,17 +572,17 @@ def expand_markdown(source, html_mode):
             index += 1
             code_source = "\n".join(code_lines) + "\n"
             if not html_mode:
-                output.append("```c")
+                output.append(f"```{language}")
                 output.extend(code_lines)
                 output.append("```")
             elif PLAYBACK_TYPING_ATTR_RE.search(code_fence.group("attrs") or ""):
                 code_example_count += 1
-                output.append(render_html_typing_lesson(code_source, code_example_count))
-            elif is_complete_c_program(code_source):
+                output.append(render_html_typing_lesson(code_source, code_example_count, language))
+            elif language == "c" and is_complete_c_program(code_source):
                 code_example_count += 1
                 output.append(render_html_code_example(code_source, code_example_count))
             else:
-                output.append("```c")
+                output.append(f"```{language}")
                 output.extend(code_lines)
                 output.append("```")
             continue

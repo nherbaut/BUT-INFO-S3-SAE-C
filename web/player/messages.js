@@ -126,6 +126,10 @@ completedWithErrors: [
       emptyAnnotation: "L'annotation \"{title}\" ne couvre aucun code.",
       nestedAnnotation: "L'annotation \"{title}\" doit etre fermee par /** */ avant une nouvelle annotation.",
       unclosedAnnotation: "L'annotation \"{title}\" n'est pas fermee par /** */.",
+      noOpenBashAnnotation: "Marqueur ## sans annotation ouverte.",
+      emptyBashAnnotation: "L'annotation \"{title}\" ne couvre aucune commande.",
+      nestedBashAnnotation: "L'annotation \"{title}\" doit etre fermee par ## avant une nouvelle annotation.",
+      unclosedBashAnnotation: "L'annotation \"{title}\" n'est pas fermee par ##.",
     },
     quiz: {
       valid: "Valide",
