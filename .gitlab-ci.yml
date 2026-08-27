@@ -1,0 +1,37 @@
+stages:
+  - test
+  - deploy
+
+default:
+  image: debian:bookworm-slim
+  before_script:
+    - apt-get update
+    - >-
+      DEBIAN_FRONTEND=noninteractive apt-get install --yes
+      build-essential
+      make
+      pandoc
+      python3
+      texlive-latex-base
+      texlive-latex-recommended
+      texlive-latex-extra
+      texlive-fonts-recommended
+
+test-c:
+  stage: test
+  script:
+    - make test
+
+deploy-pages:
+  stage: deploy
+  needs:
+    - test-c
+  script:
+    - make supports
+  pages:
+    publish: build/supports
+  artifacts:
+    paths:
+      - build/supports
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

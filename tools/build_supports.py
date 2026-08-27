@@ -1716,6 +1716,29 @@ def admin_page(flow_items, question_bank):
     previewFrame.src = section.href;
   }}
 
+  function revealPreviewPlayer() {{
+    try {{
+      const previewDocument = previewFrame.contentDocument;
+      const hash = previewFrame.contentWindow?.location.hash || "";
+      if (!previewDocument || !hash) return;
+      const target = previewDocument.getElementById(decodeURIComponent(hash.slice(1)));
+      if (!target) return;
+
+      let player = target.matches("c-player") ? target : target.querySelector("c-player");
+      let sibling = target.nextElementSibling;
+      while (!player && sibling && !sibling.matches("h1, h2")) {{
+        player = sibling.matches("c-player") ? sibling : sibling.querySelector("c-player");
+        sibling = sibling.nextElementSibling;
+      }}
+      const exercise = player?.closest("details.embedded-exercise");
+      if (!exercise) return;
+      exercise.open = true;
+      target.scrollIntoView({{ block: "start" }});
+    }} catch (_error) {{
+      // The preview may be unavailable while its page is being replaced.
+    }}
+  }}
+
   function updateFullscreenButton() {{
     const button = document.querySelector("[data-preview-fullscreen]");
     const active = document.fullscreenElement === previewContainer;
@@ -2090,6 +2113,7 @@ def admin_page(flow_items, question_bank):
   document.querySelector("[data-flow-current]").addEventListener("click", sendCurrentFlowItem);
   document.querySelector("[data-flow-next]").addEventListener("click", sendNextFlowItem);
   document.querySelector("[data-preview-fullscreen]").addEventListener("click", togglePreviewFullscreen);
+  previewFrame.addEventListener("load", revealPreviewPlayer);
   document.addEventListener("fullscreenchange", updateFullscreenButton);
 
   document.querySelectorAll("[data-flow-index]").forEach((button) => {{
