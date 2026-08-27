@@ -1,0 +1,3 @@
+conversion = 3.7
+somme = 21
+max = 9

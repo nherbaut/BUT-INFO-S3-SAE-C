@@ -1,8 +1,9 @@
 {
   "id": "seance-02-compilation-separee",
-  "title": "Compilation separee",
-  "statement": "Separer le programme en un fichier principal, une implementation et un header.",
-  "sources": ["src/main.c", "src/stats.c", "include/projet/stats.h"],
+  "title": "Passer d'un programme monolithique a une compilation separee",
+  "statement": "Le projet commence avec un unique fichier src/main.c. Extrayez moyenne et maximum dans src/stats.c, declarez-les dans include/projet/stats.h, adaptez src/main.c et le Makefile pour compiler puis lier les deux fichiers objets.",
+  "sources": ["src/main.c"],
+  "browser_runnable": false,
   "main": "src/main.c",
   "stdin": "",
   "expected_stdout": "moyenne = 12.00\nmax = 14\n",

@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import base64
+import textwrap
 import unicodedata
 import zipfile
 from pathlib import Path
@@ -45,9 +46,11 @@ ADMIN_DIGEST = "$argon2id$v=19$m=65536,t=3,p=4$SDaf4HTJfRAO2wys9QIE7A$bLo2gTmVGo
 DIRECTIVE = re.compile(r"^\{\{\s*(c_demo|c_exercise)\s*:\s*([^}]+?)\s*\}\}\s*$")
 CODE_FENCE = re.compile(r"^```\s*(?P<language>c|bash)(?:\s+\{(?P<attrs>[^}]*)\})?\s*$", re.I)
 CODE_FENCE_END = re.compile(r"^```\s*$")
+ADMONITION_FENCE = re.compile(r"^```\s*(?P<kind>todo|trap|warning|remember|tip|technical)\s*$", re.I)
 PLAYBACK_TYPING_ATTR_RE = re.compile(r"(?:^|\s)playback\s*=\s*typing(?:\s|$)", re.I)
 C_MAIN_RE = re.compile(r"\bint\s+main\s*\(", re.S)
 C_STDIN_RE = re.compile(r"\b(?:scanf|getchar|gets)\s*\(|\bfgets\s*\(|\bfscanf\s*\(\s*stdin\b|\bfread\s*\([^;]*\bstdin\b", re.S)
+C_ARGS_RE = re.compile(r"\bint\s+main\s*\([^)]*\b(?:argc|argv)\b", re.S)
 QUIZ_START = re.compile(r"^:::\s+quiz(?:\s+\{#([^}]+)\})?\s*$")
 QUESTION_START = re.compile(r"^:::\s+question(?:\s+\{#([^}]+)\})?\s*$")
 DIV_END = re.compile(r"^:::\s*$")
@@ -73,6 +76,33 @@ SESSION_ICON = "&#128218;"
 MILESTONE_ICON = "&#9873;"
 EXERCISE_ICON = "&#128187;"
 QUIZ_ICON = "&#10067;"
+
+ADMONITIONS = {
+    "todo": {
+        "message": "admonition.todo",
+        "icon": "&#9745;",
+    },
+    "trap": {
+        "message": "admonition.trap",
+        "icon": "&#9888;",
+    },
+    "warning": {
+        "message": "admonition.warning",
+        "icon": "&#9888;",
+    },
+    "remember": {
+        "message": "admonition.remember",
+        "icon": "&#128273;",
+    },
+    "tip": {
+        "message": "admonition.tip",
+        "icon": "&#128161;",
+    },
+    "technical": {
+        "message": "admonition.technical",
+        "icon": "&#9881;",
+    },
+}
 
 
 def read_text(path):
@@ -142,6 +172,20 @@ def write_pdf_footer():
         PDF_FOOTER_TEX,
         r"""
 \usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{etoolbox}
+\newenvironment{saecadmonition}[1]{
+  \def\saecadmonitioncolor{blue}
+  \def\saecadmonitionicon{\faTasks}
+  \def\saecadmonitiontitle{Action a r\'ealiser}
+  \ifstrequal{#1}{trap}{\def\saecadmonitioncolor{orange}\def\saecadmonitionicon{\faExclamationCircle}\def\saecadmonitiontitle{Pi\`ege}}{}
+  \ifstrequal{#1}{warning}{\def\saecadmonitioncolor{red}\def\saecadmonitionicon{\faExclamationTriangle}\def\saecadmonitiontitle{Attention}}{}
+  \ifstrequal{#1}{remember}{\def\saecadmonitioncolor{blue}\def\saecadmonitionicon{\faKey}\def\saecadmonitiontitle{A retenir}}{}
+  \ifstrequal{#1}{tip}{\def\saecadmonitioncolor{green}\def\saecadmonitionicon{\faLightbulb}\def\saecadmonitiontitle{Conseil}}{}
+  \ifstrequal{#1}{technical}{\def\saecadmonitioncolor{gray}\def\saecadmonitionicon{\faCogs}\def\saecadmonitiontitle{Point technique}}{}
+  \begin{tcolorbox}[colback=\saecadmonitioncolor!7,colframe=\saecadmonitioncolor!65!black,boxrule=0.6pt,arc=2pt,title={\saecadmonitionicon\quad\saecadmonitiontitle}]
+}{\end{tcolorbox}}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyfoot[C]{\footnotesize Cr\'edits : Nicolas Herbaut, Romain Giot et Pierre Ramet}
@@ -186,7 +230,16 @@ def course_infos():
 def milestone_infos():
     source = read_text(MILESTONES_PATH)
     milestones = []
-    for match in re.finditer(r"^##\s+(.+)$", source, re.M):
+    in_code_fence = False
+    for line in source.splitlines():
+        if line.startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        match = re.match(r"^##\s+(.+)$", line)
+        if not match:
+            continue
         title = match.group(1)
         normalized = unicodedata.normalize("NFKD", title)
         normalized = "".join(char for char in normalized if not unicodedata.combining(char))
@@ -205,8 +258,9 @@ def load_exercise(path_text):
         files.append({"name": source, "content": read_text(source_path)})
     meta["path"] = str(exercise_dir.relative_to(ROOT))
     meta["files"] = files
-    meta["browser_runnable"] = len(files) == 1
+    meta["browser_runnable"] = meta.get("browser_runnable", len(files) == 1)
     meta["uses_stdin"] = bool(meta.get("stdin")) or any(uses_stdin(file["content"]) for file in files)
+    meta["uses_args"] = bool(meta.get("argv")) or any(uses_arguments(file["content"]) for file in files)
     return meta
 
 
@@ -385,6 +439,7 @@ def render_html_player(kind, path_text):
     browser_label_key = "embeddedExercise.browserRunnable" if exercise["browser_runnable"] else "embeddedExercise.localOnly"
     browser_class = "text-bg-success" if exercise["browser_runnable"] else "text-bg-warning"
     anchor_id = f"exercise-{exercise['id']}"
+    local_modal_id = f"local-{exercise['id']}"
     content_kind = "example" if kind == "c_demo" else "exercise"
     icon = "{}" if content_kind == "example" else "&lt;/&gt;"
     return f"""
@@ -393,13 +448,24 @@ def render_html_player(kind, path_text):
   <span class="content-kind content-kind--{content_kind}"><span class="content-kind__icon" aria-hidden="true">{icon}</span><span data-message="{label_key}"></span></span>
   <span class="embedded-exercise__title">{title}</span>
   <span class="badge {browser_class} ms-2" data-message="{browser_label_key}"></span>
+  <button class="embedded-exercise__local-button" type="button" data-local-modal-open="{html.escape(local_modal_id, quote=True)}" data-message-title="embeddedExercise.localInstructions"><span aria-hidden="true">&#128187;</span><span class="visually-hidden" data-message="embeddedExercise.localInstructions"></span></button>
 </summary>
 <div class="card-body">
 <p class="card-text">{statement}</p>
-<p class="exercise-local card-text text-body-secondary"><span data-message="embeddedExercise.localVersion"></span> <code>cd {local_path}</code>, <span data-message="embeddedExercise.then"></span> <code>{command}</code>.</p>
 <c-player data-content-kind="{content_kind}" data-readonly="{readonly}" data-exercise-b64="{payload}"></c-player>
 </div>
 </details>
+<div class="local-run-modal" id="{html.escape(local_modal_id, quote=True)}" data-local-modal hidden>
+<div class="local-run-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="{html.escape(local_modal_id, quote=True)}-title">
+<div class="local-run-modal__header">
+<h2 class="h5 mb-0" id="{html.escape(local_modal_id, quote=True)}-title"><span data-message="embeddedExercise.localVersion"></span> {title}</h2>
+<button class="btn-close" type="button" data-local-modal-close><span class="visually-hidden" data-message="embeddedExercise.close"></span></button>
+</div>
+<p class="mb-3" data-message="embeddedExercise.localInstructionsBody"></p>
+<pre class="local-run-modal__commands mb-0"><code>cd {local_path}
+{command}</code></pre>
+</div>
+</div>
 """
 
 
@@ -415,6 +481,10 @@ def uses_stdin(source):
     return bool(C_STDIN_RE.search(source))
 
 
+def uses_arguments(source):
+    return bool(C_ARGS_RE.search(source))
+
+
 def render_html_code_example(source, index):
     payload = encode_data(
         {
@@ -424,12 +494,14 @@ def render_html_code_example(source, index):
             "sources": ["main.c"],
             "main": "main.c",
             "stdin": "",
+            "argv": "",
             "expected_stdout": "",
             "expected_stderr": "",
             "path": "",
             "files": [{"name": "main.c", "content": source}],
             "browser_runnable": True,
             "uses_stdin": uses_stdin(source),
+            "uses_args": uses_arguments(source),
         }
     )
     return f'<c-player data-content-kind="example" data-readonly="false" data-exercise-b64="{payload}"></c-player>'
@@ -552,14 +624,65 @@ def render_pdf_block(kind, path_text):
     return "\n".join(blocks)
 
 
-def expand_markdown(source, html_mode):
+def render_html_admonition(kind, source, document_id, occurrence):
+    metadata = ADMONITIONS[kind]
+    body = textwrap.dedent(source).strip()
+    icon = metadata["icon"]
+    label = metadata["message"]
+    if kind != "todo":
+        return f'''::: {{.course-admonition .course-admonition--{kind} role="note"}}
+<div class="course-admonition__header"><span class="course-admonition__icon" aria-hidden="true">{icon}</span><strong data-message="{label}"></strong></div>
+
+::: {{.course-admonition__body}}
+{body}
+:::
+:::'''
+
+    stable_key = f"{document_id}\0{occurrence}\0{source}"
+    todo_id = hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:16]
+    return f'''::: {{.course-admonition .course-admonition--todo data-todo-id="{todo_id}" role="note"}}
+<div class="course-admonition__header"><span class="course-admonition__icon" aria-hidden="true">{icon}</span><strong data-message="{label}"></strong></div>
+
+::: {{.course-admonition__body .course-admonition__body--todo data-todo-complete="" data-message-aria-label="todo.complete" role="button" tabindex="0"}}
+{body}
+:::
+<div class="todo-confetti" aria-hidden="true"></div>
+:::'''
+
+
+def render_pdf_admonition(kind, source):
+    latex_body = source.strip().replace("_", r"\_")
+    return f"\\begin{{saecadmonition}}{{{kind}}}\n\n{latex_body}\n\n\\end{{saecadmonition}}"
+
+
+def expand_markdown(source, html_mode, document_id=""):
     lines = source.splitlines()
     output = []
     index = 0
     quiz_count = 0
     code_example_count = 0
+    admonition_count = 0
     while index < len(lines):
         line = lines[index]
+        admonition_fence = ADMONITION_FENCE.match(line)
+        if admonition_fence:
+            kind = admonition_fence.group("kind").lower()
+            index += 1
+            body_lines = []
+            while index < len(lines) and not CODE_FENCE_END.match(lines[index]):
+                body_lines.append(lines[index])
+                index += 1
+            if index >= len(lines):
+                raise ValueError(f"Bloc {kind} non ferme")
+            index += 1
+            admonition_count += 1
+            body = "\n".join(body_lines)
+            output.append(
+                render_html_admonition(kind, body, document_id, admonition_count)
+                if html_mode
+                else render_pdf_admonition(kind, body)
+            )
+            continue
         code_fence = CODE_FENCE.match(line)
         if code_fence:
             language = code_fence.group("language").lower()
@@ -628,9 +751,13 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
         command.extend(
             [
                 "--include-after-body",
+                str(PLAYER_DST / "c-runtime-adapter.js"),
+                "--include-after-body",
                 str(CODEMIRROR_INCLUDE),
                 "--include-after-body",
                 str(PLAYER_DST / "messages.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "local-run-modal.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "c-player.js"),
                 "--include-after-body",
@@ -641,6 +768,8 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
                 str(PLAYER_DST / "site-theme.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "exercise-progress.js"),
+                "--include-after-body",
+                str(PLAYER_DST / "todo-player.js"),
                 "--include-after-body",
                 str(PLAYER_DST / "ntfy-chat.js"),
                 "-o",
@@ -2051,7 +2180,7 @@ def build_quiz_pdf(courses):
 def build_full_pdf(courses):
     blocks = ["# BUT INFO S3 SAE-C", ""]
     for course in courses:
-        blocks.append(expand_markdown(read_text(course["path"]), html_mode=False))
+        blocks.append(expand_markdown(read_text(course["path"]), html_mode=False, document_id=course["stem"]))
         blocks.append("\\newpage")
         blocks.append("")
     run_pandoc("\n".join(blocks), BUILD / FULL_PDF, html_mode=False)
@@ -2109,11 +2238,11 @@ def main():
     admin_flow = []
     for course in courses:
         source = read_text(course["path"])
-        run_pandoc(expand_markdown(source, html_mode=True), BUILD / course["html"], True, course["title"])
+        run_pandoc(expand_markdown(source, html_mode=True, document_id=course["stem"]), BUILD / course["html"], True, course["title"])
         raw_body = TITLE_BLOCK_RE.sub("", extract_body(read_text(BUILD / course["html"]))).strip()
         admin_flow.extend(admin_flow_items(course, source, raw_body))
         postprocess_doc_page(BUILD / course["html"], courses, course["html"], "course", course["pdf"], course_starters[course["html"]])
-        run_pandoc(expand_markdown(source, html_mode=False), BUILD / course["pdf"], False)
+        run_pandoc(expand_markdown(source, html_mode=False, document_id=course["stem"]), BUILD / course["pdf"], False)
 
     write_text(BUILD / ADMIN_PAGE, admin_page(admin_flow, live_question_bank(courses)))
     build_full_pdf(courses)

@@ -6,8 +6,8 @@
     cPlayer: {
       defaultTitle: "Programme C",
       localOnly: "Local uniquement",
-      stdin: "stdin",
-      stdinHelp: "Entree standard du programme : saisir ici les valeurs que le programme lirait au clavier. Separer les valeurs par des espaces ou des retours a la ligne, par exemple : 12 14",
+      parameters: "Parametres d'execution",
+      parametersHelp: "Le texte est fourni a scanf. Chaque valeur separee par un espace ou un retour a la ligne devient aussi un argument argv ; argv[0] reste le nom du programme.",
       outputs: "Sorties (stdout)",
       run: "Build & Run",
       reset: "Reset",
@@ -58,6 +58,9 @@ completedWithErrors: [
       localOnly: "Sur votre machine",
       localVersion: "Version locale :",
       then: "puis",
+      localInstructions: "Executer sur votre ordinateur",
+      localInstructionsBody: "Dans votre dépot, utilisez les commandes suivantes pour exécuter le dcode",
+      close: "Fermer",
     },
     contentType: {
       quiz: "Quiz",
@@ -81,6 +84,7 @@ completedWithErrors: [
       cCommentsBody: "Le code complet et ses commentaires C sont affiches.",
       ready: "",
       canvasLabel: "Code C anime",
+      progress: "Etapes parcourues",
       codeCopied: "Code copié.",
       codeCopyFailed: "Impossible de copier le code.",
       annotationAria: "Afficher le commentaire : {title}",
@@ -93,7 +97,8 @@ completedWithErrors: [
       typing: [    "Je tape vite, non ?",    "Mon clavier commence à chauffer.",    "Je me concentre pour ne pas faire d'erreur de syntaxe.",    "Vous remarquerez cette maîtrise exceptionnelle du clavier.",    "Normalement, à cette vitesse, il faut un permis.",    "Je connais évidemment tout ce code par cœur.",    "Aucune autocomplétion. Tout est dans les doigts.",    "Ne clignez pas des yeux, vous risquez de rater une ligne.",    "Le compilateur commence déjà à avoir peur.",    "Cette démonstration de frappe est totalement authentique."],
       pause: "Pause",
       paused: "Lecture en pause.",
-      continue: "Continuer",
+      continue: "→ Continuer",
+      continueShortcut: "Continuer (Flèche droite)",
       explanationFallback: "Poursuivre la lecture pour afficher la suite du programme.",
       explanationPause:  [
     "Oui, je commente mon code. Ça arrive.",
@@ -164,9 +169,8 @@ completedWithErrors: [
     "Une nouvelle tentative est recommandée. Avec éventuellement un peu moins d'intuition.",
     "Il manque au moins une bonne réponse. Bonne nouvelle : les questions sont toujours les mêmes.",
     "Vous pouvez recommencer. Cette fois, certaines réponses pourraient même être correctes."
-],
+      ],
       restart: "On efface tout et on recommence.",
-      questionValid: "",
     },
     ntfy: {
       title: "Chat SAE-C",
@@ -195,6 +199,17 @@ completedWithErrors: [
       count: "{completed}/{total} realise{plural}",
       plural: "s",
     },
+    admonition: {
+      todo: "A realiser",
+      trap: "Piege",
+      warning: "Attention",
+      remember: "A retenir",
+      tip: "Conseil",
+      technical: "Point technique",
+    },
+    todo: {
+      complete: "J'ai realise cette action",
+    },
   };
 
   function lookup(key) {
@@ -215,6 +230,12 @@ completedWithErrors: [
   function apply(root = document) {
     root.querySelectorAll("[data-message]").forEach((element) => {
       element.textContent = t(element.dataset.message);
+    });
+    root.querySelectorAll("[data-message-title]").forEach((element) => {
+      element.title = t(element.dataset.messageTitle);
+    });
+    root.querySelectorAll("[data-message-aria-label]").forEach((element) => {
+      element.setAttribute("aria-label", t(element.dataset.messageAriaLabel));
     });
   }
 

@@ -3,6 +3,7 @@ build/
 __pycache__/
 *.o
 teacher-private/
+projet/capteurs-corrige/
 
 exercices/seance-01/moyenne/moyenne
 exercices/seance-01/max3/max3

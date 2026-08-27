@@ -1,4 +1,4 @@
-# Seance 3 - Fonctions et pointeurs
+# Phase 3 - Fonctions et pointeurs
 
 ## Objectifs
 

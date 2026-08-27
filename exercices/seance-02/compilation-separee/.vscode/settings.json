@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/exercices/seance-02/compilation-separee/build",
+            "binaryPath": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/exercices/seance-02/compilation-separee/build/stats",
+            "binaryArgs": []
+        }
+    ]
+}

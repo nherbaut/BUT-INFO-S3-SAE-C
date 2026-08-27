@@ -1,4 +1,4 @@
-# Seance 1 - Premiers programmes C
+# Phase 1 - Premiers programmes C
 
 ## Objectifs
 
@@ -131,7 +131,7 @@ Dans l'exemple precedent :
   bibliothèque standard.
 
 Cette distinction entre declaration et definition deviendra essentielle avec la
-compilation séparée en seance 2.
+compilation séparée en phase 2.
 
 ## Afficher avec `printf`
 
@@ -163,11 +163,11 @@ description: On considere le programme `hello.c` minimal.
 
 ## Compiler et executer
 
-Pendant cette premiere seance, les exercices peuvent être lances dans le
+Pendant cette premiere phase, les exercices peuvent être lances dans le
 navigateur. Cela permet de se concentrer d'abord sur le langage : variables,
 conditions, boucles et affichage.
 
-La commande locale complete sera reprise en seance 2. Retenir seulement l'idée
+La commande locale complete sera reprise en phase 2. Retenir seulement l'idée
 générale pour un programme simple :
 
 ```bash
@@ -245,28 +245,32 @@ Les boucles `while` et `for` existent aussi en C.
 int main(void)
 {
 
-  /** Lecture d'une variable 
+  /** Déclaration de variable
    * 
    * On commence par déclarer la variable (innutile de lui donner une valeur)
    */
   int max;
   /** */
-  /** Puis on lit une ligne dans le stdin 
+
+  /** Lecture valeur dans le stdin
    * 
    * scanf, comme printf est formaté, et utilise un formatage très proche de java.
    * Ici, on passe l'adresse de la variable max, afin que la fonction scanf puisse
    * modifier sa valeur.
   */
+
   scanf("%d",&max);
   /**  */
+
   /** Boucle For 
    * 
    * en C21, C'est exactement la même syntaxe que le Java
    */
   for (int i= 0; i < max; i++) {
-    /** */
+ 
       printf("%d\n", i);
   }
+  /** */
 
 
 return 0;
@@ -345,12 +349,16 @@ printf("somme = %d\n", somme);
 /** */
 ```
 
-Pour cette séance, on retient surtout :
+Pour cette phase, on retient surtout :
 
-- tous les éléments d'un tableau ont le même type ;
-- l'indice du premier élément est `0` ;
-- la taille indiquée dans une déclaration réserve de la place ;
-- accéder hors des bornes est une erreur que C ne détecte pas toujours.
+```remember
+  
+* Tous les éléments d'un tableau ont le même type ;
+* L'indice du premier élément est `0` ;
+* La taille indiquée dans une déclaration réserve de la place ;
+* Accéder hors des bornes est une erreur que C ne détecte pas toujours.
+
+```
 
 ::: quiz {#quiz-s1-tableaux}
 title: Tableaux simples
@@ -388,7 +396,7 @@ On peut aussi démarer simplement le programme et taper avec son clavier les val
 
 Le système intégré à la page compile et exécute des programmes courts. Il ne
 remplace pas GCC/Clang, mais il suffit pour manipuler les premières notions sans
-installer l'outillage pendant la séance 1.
+installer l'outillage pendant la phase 1.
 
 
 ## Retrouver l'exercice dans le dépôt local
@@ -396,26 +404,45 @@ installer l'outillage pendant la séance 1.
 Les mêmes exercices existent dans le dépôt. Quand l'environnement local est
 utilisé, les commandes deviennent :
 
+
 ```bash
 cd exercices/seance-01/moyenne
 make run
 make test
 ```
 
-La prise en main détaillée de `gcc`, des Makefiles et de l'organisation des
-fichiers est l'objectif de la séance 2.
+La prise en main détaillée du compilateur, des Makefiles et de l'organisation des
+fichiers est l'objectif de la phase 2.
 
 ## Présentation rapide du projet
 
-Le projet capteurs analysera des mesures de temperature fournies par une
-bibliotheque. Le reseau et le JSON sont hors sujet: le travail portera sur les
-structures, les calculs, la memoire dynamique, les tests et le rapport.
+Le projet capteurs analysera des mesures de temperature fournies par une bibliotheque. 
 
-## Exercices proposés à faire à la maison
+Le flux de donnée est récupéré sur le reseau (https) au format JSON, nous avons déjà écrit pour vous la partie du code qui réaliser la récupération et le parsing des données.
+Il faut reste à faire les tâches suivantes:
+- structures
+- les calculs
+- la memoire dynamique
+- les tests 
+- le rapport
 
-- Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
-- Calcul de moyenne.
-- Moyenne de trois entiers.
-- Comptage des notes supérieures à 10.
-- Somme des éléments d'un tableau d'entiers.
-- Table de multiplication.
+## Pour vous entrainer
+
+```todo
+Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
+```
+
+```todo
+Calcul de moyenne.
+```
+
+```todo
+Moyenne de trois entiers.
+```
+```todo
+Comptage des notes supérieures à 10 dans le tableau
+```
+
+```todo
+Somme des éléments d'un tableau d'entiers.
+```

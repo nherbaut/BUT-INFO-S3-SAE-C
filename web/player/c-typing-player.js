@@ -127,7 +127,12 @@ class CTypingPlayer extends HTMLElement {
           if (annotation) {
             throw new Error(this.t("nestedBashAnnotation", { title: annotation.title }));
           }
-          annotation = { title, body: [], start: visibleLines.join("\n").length };
+          const visibleSource = visibleLines.join("\n");
+          annotation = {
+            title,
+            body: [],
+            start: visibleSource.length + (visibleSource ? 1 : 0),
+          };
         } else {
           if (!annotation) {
             throw new Error(this.t("noOpenBashAnnotation"));
@@ -204,22 +209,20 @@ class CTypingPlayer extends HTMLElement {
           </div>
         </header>
         <div class="c-typing-player__status" aria-live="polite">${this.escape(this.t("ready"))}</div>
+        <nav class="c-typing-player__progress" aria-label="${this.escape(this.t("progress"))}" hidden>
+          <ol class="c-typing-player__progress-list"></ol>
+        </nav>
         <div class="c-typing-player__layout">
           <div class="c-typing-player__canvas c-typing-player__canvas--empty" tabindex="0" aria-label="${this.escape(this.t("canvasLabel"))}">
             <pre class="c-typing-player__code"></pre>
             <button class="btn btn-primary c-typing-player__start" type="button">${this.escape(this.t("start"))}</button>
           </div>
-          <aside class="c-typing-player__notes" aria-live="polite">
-            <div class="c-typing-player__step">${this.escape(this.t("initialStep", { total: this.steps.length }))}</div>
-            <h3 class="h6 c-typing-player__note-title">${this.escape(this.t("preparedTitle"))}</h3>
-            <p class="mb-0 c-typing-player__note-body">${this.escape(this.t("preparedBody"))}</p>
-            <div class="c-typing-player__note-actions">
-              <button class="btn btn-primary btn-sm c-typing-player__play" type="button" hidden>${this.escape(this.t("play"))}</button>
-              <button class="btn btn-outline-primary btn-sm c-typing-player__next" type="button" hidden>${this.escape(this.t("next"))}</button>
-              <button class="btn btn-outline-secondary btn-sm c-typing-player__comments" type="button" hidden></button>
-            </div>
-          </aside>
         </div>
+        <footer class="c-typing-player__footer">
+          <button class="btn btn-primary btn-sm c-typing-player__play" type="button" hidden>${this.escape(this.t("play"))}</button>
+          <button class="btn btn-outline-primary btn-sm c-typing-player__next" type="button" hidden>${this.escape(this.t("next"))}</button>
+          <button class="btn btn-outline-secondary btn-sm c-typing-player__comments" type="button" hidden></button>
+        </footer>
         <audio class="c-typing-player__audio c-typing-player__audio--typing" preload="none" loop src="player/typing.mp3"></audio>
         <audio class="c-typing-player__audio c-typing-player__audio--matrix" preload="none" loop src="player/matrix.mp3"></audio>
       </section>
@@ -230,6 +233,7 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__reset").addEventListener("click", () => this.reset());
     this.querySelector(".c-typing-player__mute").addEventListener("click", () => this.toggleMute());
     this.querySelector(".c-typing-player__comments").addEventListener("click", () => this.toggleComments());
+    this.querySelector(".c-typing-player").addEventListener("keydown", (event) => this.handleKeydown(event));
     const code = this.querySelector(".c-typing-player__code");
     code.addEventListener("pointerup", () => this.copySelectedCode());
     code.addEventListener("keyup", () => this.copySelectedCode());
@@ -244,11 +248,6 @@ class CTypingPlayer extends HTMLElement {
         this.pinAnnotation(event);
       }
     });
-    this.noteState = {
-      step: this.t("initialStep", { total: this.steps.length }),
-      title: this.t("preparedTitle"),
-      body: this.t("preparedBody"),
-    };
   }
 
   reset({ showCompleted = false } = {}) {
@@ -315,16 +314,10 @@ class CTypingPlayer extends HTMLElement {
     this.completed = true;
     this.pinnedStepIndex = null;
     this.showCComments = this.prefersCComments();
-    this.noteState = {
-      step: this.t("completeStep", { total: this.steps.length }),
-      title: this.t("completeTitle"),
-      body: this.t("completeBody"),
-    };
-    this.renderNote(this.noteState);
     this.querySelector(".c-typing-player__start").hidden = true;
     this.querySelector(".c-typing-player__reset").disabled = false;
     this.querySelector(".c-typing-player__play").hidden = false;
-    this.querySelector(".c-typing-player__play").textContent = this.t("replay");
+    this.setPlayLabel("replay");
     this.querySelector(".c-typing-player__next").hidden = true;
     this.querySelector(".c-typing-player__comments").hidden = false;
     this.updateCommentsButton();
@@ -339,15 +332,6 @@ class CTypingPlayer extends HTMLElement {
     this.showCComments = !this.showCComments;
     this.saveCCommentsPreference();
     this.updateCommentsButton();
-    if (this.showCComments) {
-      this.renderNote({
-        step: this.t("completeStep", { total: this.steps.length }),
-        title: this.t("cCommentsTitle"),
-        body: this.t("cCommentsBody"),
-      });
-    } else {
-      this.renderNote(this.noteState);
-    }
     this.updateCode();
   }
 
@@ -363,6 +347,7 @@ class CTypingPlayer extends HTMLElement {
     this.querySelector(".c-typing-player__reset").disabled = false;
     this.querySelector(".c-typing-player__play").hidden = false;
     this.querySelector(".c-typing-player__next").hidden = false;
+    this.querySelector(".c-typing-player__canvas").focus({ preventScroll: true });
     this.play();
   }
 
@@ -383,7 +368,7 @@ class CTypingPlayer extends HTMLElement {
     this.pinnedStepIndex = null;
     this.typing = true;
     this.setStatus(this.t("typing"));
-    this.querySelector(".c-typing-player__play").textContent = this.t("pause");
+    this.setPlayLabel("pause");
     this.tick();
   }
 
@@ -392,7 +377,7 @@ class CTypingPlayer extends HTMLElement {
     window.clearTimeout(this.timer);
     this.stopAudio(false);
     this.setStatus(this.t("paused"));
-    this.querySelector(".c-typing-player__play").textContent = this.t("play");
+    this.setPlayLabel("play");
     this.updateCode();
   }
 
@@ -456,24 +441,16 @@ class CTypingPlayer extends HTMLElement {
     this.typing = false;
     this.stopAudio(false);
     if (this.stepIndex < this.steps.length) {
-      const step = this.steps[this.stepIndex];
       this.stepIndex += 1;
       this.pausedAtStep = true;
       this.pinnedStepIndex = this.stepIndex - 1;
-      this.setAnnotationNote(this.pinnedStepIndex);
-      this.querySelector(".c-typing-player__play").textContent = this.t("continue");
+      this.setPlayLabel("continue");
       this.setStatus(this.t("explanationPause"));
     } else {
       this.completed = true;
       this.markCompleted();
       this.pinnedStepIndex = null;
-      this.noteState = {
-        step: this.t("completeStep", { total: this.steps.length }),
-        title: this.t("completeTitle"),
-        body: this.t("completeBody"),
-      };
-      this.renderNote(this.noteState);
-      this.querySelector(".c-typing-player__play").textContent = this.t("replay");
+      this.setPlayLabel("replay");
       this.querySelector(".c-typing-player__next").hidden = true;
       this.querySelector(".c-typing-player__comments").hidden = false;
       this.updateCommentsButton();
@@ -483,16 +460,18 @@ class CTypingPlayer extends HTMLElement {
   }
 
   updateCode() {
+    this.updateProgress();
     if (this.showCComments) {
       this.updateCommentedCode();
       return;
     }
     const lines = this.visible.split("\n");
+    const activeAnnotationIndex = this.hoveredStepIndex ?? this.pinnedStepIndex;
     const code = lines.map((line, index) => {
       const number = index + 1;
       const annotationIndex = this.annotationIndexForLine(number);
       const step = annotationIndex === null ? null : this.steps[annotationIndex];
-      const selected = annotationIndex !== null && annotationIndex === (this.hoveredStepIndex ?? this.pinnedStepIndex);
+      const selected = annotationIndex !== null && annotationIndex === activeAnnotationIndex;
       const cursor = this.typing && index === lines.length - 1 ? '<span class="c-typing-player__cursor"></span>' : "";
       const annotationClass = step ? ` c-typing-player__line--annotation-${step.colorIndex}` : "";
       const selectedClass = selected ? " c-typing-player__line--selected" : "";
@@ -500,13 +479,31 @@ class CTypingPlayer extends HTMLElement {
       const focusable = step && number === step.lines[0]
         ? ` tabindex="0" role="button" aria-label="${this.escape(this.t("annotationAria", { title: step.title }))}"`
         : "";
-      return `<span class="c-typing-player__line${annotationClass}${selectedClass}"${interactive}${focusable}><span class="c-typing-player__line-number">${number}</span><span>${this.highlight(line)}${cursor}</span></span>`;
+      const comment = step && annotationIndex === activeAnnotationIndex && number === step.lines[1]
+        ? this.renderInlineComment(step, annotationIndex)
+        : "";
+      return `<span class="c-typing-player__line${annotationClass}${selectedClass}"${interactive}${focusable}><span class="c-typing-player__line-number">${number}</span><span>${this.highlight(line)}${cursor}</span></span>${comment}`;
     }).join("");
     const canvas = this.querySelector(".c-typing-player__canvas");
     this.querySelector(".c-typing-player__code").innerHTML = code;
     canvas.classList.toggle("c-typing-player__canvas--empty", this.visible.length === 0);
     canvas.scrollTop = canvas.scrollHeight;
     this.followTypedLine();
+  }
+
+  updateProgress() {
+    const progress = this.querySelector(".c-typing-player__progress");
+    const list = this.querySelector(".c-typing-player__progress-list");
+    if (!progress || !list) {
+      return;
+    }
+    const completedCount = Math.min(this.stepIndex, this.steps.length);
+    progress.hidden = completedCount === 0;
+    list.innerHTML = this.steps.slice(0, completedCount).map((step, index) => {
+      const current = index === completedCount - 1;
+      const currentAttribute = current ? ' aria-current="step"' : "";
+      return `<li class="c-typing-player__progress-item c-typing-player__progress-item--annotation-${step.colorIndex}${current ? " c-typing-player__progress-item--current" : ""}"${currentAttribute}>${this.escape(step.title)}</li>`;
+    }).join("");
   }
 
   followTypedLine() {
@@ -529,6 +526,42 @@ class CTypingPlayer extends HTMLElement {
     });
   }
 
+  renderInlineComment(step, annotationIndex) {
+    const label = this.t("step", { current: annotationIndex + 1, total: this.steps.length });
+    const body = step.body || this.t("explanationFallback");
+    return `<span class="c-typing-player__comment c-typing-player__comment--annotation-${step.colorIndex}" data-annotation-index="${annotationIndex}" role="note" aria-live="polite"><span class="c-typing-player__comment-step">${this.escape(label)}</span><strong class="c-typing-player__comment-title">${this.escape(step.title)}</strong><span class="c-typing-player__comment-body">${this.escape(body)}</span></span>`;
+  }
+
+  handleKeydown(event) {
+    if (event.key !== "ArrowRight" || event.altKey || event.ctrlKey || event.metaKey || this.typing || this.completed) {
+      return;
+    }
+    if (event.target.matches("select, input, textarea")) {
+      return;
+    }
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      return;
+    }
+
+    event.preventDefault();
+    if (!this.querySelector(".c-typing-player__start").hidden) {
+      this.start();
+    } else {
+      this.play();
+    }
+  }
+
+  setPlayLabel(key) {
+    const button = this.querySelector(".c-typing-player__play");
+    button.textContent = this.t(key);
+    if (key === "continue") {
+      button.setAttribute("title", this.t("continueShortcut"));
+    } else {
+      button.removeAttribute("title");
+    }
+  }
+
   copySelectedCode() {
     const code = this.querySelector(".c-typing-player__code");
     const selection = window.getSelection();
@@ -543,7 +576,7 @@ class CTypingPlayer extends HTMLElement {
     }
 
     const fragment = range.cloneContents();
-    fragment.querySelectorAll(".c-typing-player__line-number").forEach((lineNumber) => lineNumber.remove());
+    fragment.querySelectorAll(".c-typing-player__line-number, .c-typing-player__comment").forEach((element) => element.remove());
     const lines = Array.from(fragment.querySelectorAll(".c-typing-player__line"));
     const text = lines.length > 0 ? lines.map((line) => line.textContent).join("\n") : fragment.textContent;
     if (!text) {
@@ -603,7 +636,6 @@ class CTypingPlayer extends HTMLElement {
       return;
     }
     this.hoveredStepIndex = index;
-    this.setAnnotationNote(index, false);
     this.updateCode();
   }
 
@@ -614,7 +646,6 @@ class CTypingPlayer extends HTMLElement {
       return;
     }
     this.hoveredStepIndex = null;
-    this.restoreNote();
     this.updateCode();
   }
 
@@ -628,35 +659,7 @@ class CTypingPlayer extends HTMLElement {
     }
     this.hoveredStepIndex = null;
     this.pinnedStepIndex = index;
-    this.setAnnotationNote(index);
     this.updateCode();
-  }
-
-  setAnnotationNote(index, persist = true) {
-    const step = this.steps[index];
-    const state = {
-      step: this.t("step", { current: index + 1, total: this.steps.length }),
-      title: step.title,
-      body: step.body || this.t("explanationFallback"),
-    };
-    if (persist) {
-      this.noteState = state;
-    }
-    this.renderNote(state);
-  }
-
-  restoreNote() {
-    if (this.pinnedStepIndex !== null) {
-      this.setAnnotationNote(this.pinnedStepIndex, false);
-      return;
-    }
-    this.renderNote(this.noteState);
-  }
-
-  renderNote(state) {
-    this.querySelector(".c-typing-player__step").textContent = state.step;
-    this.querySelector(".c-typing-player__note-title").textContent = state.title;
-    this.querySelector(".c-typing-player__note-body").textContent = state.body;
   }
 
   highlight(line) {

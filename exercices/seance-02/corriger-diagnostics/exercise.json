@@ -1,0 +1,15 @@
+{
+  "id": "seance-02-corriger-diagnostics",
+  "title": "Corriger les diagnostics du compilateur",
+  "statement": "Corriger dans src/main.c les erreurs et warnings suivants : point-virgule manquant, variable non declaree, format printf, argument scanf, affectation dans une condition, variable non initialisee, conversion de type, comparaison signe/non signe et acces hors tableau. Cet exercice se realise avec le depot local.",
+  "sources": ["src/main.c", "src/report.c", "include/projet/report.h"],
+  "main": "src/main.c",
+  "stdin": "9\n",
+  "expected_stdout": "conversion = 3.7\nsomme = 21\nmax = 9\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

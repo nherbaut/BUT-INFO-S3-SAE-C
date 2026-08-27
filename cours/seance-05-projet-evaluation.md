@@ -1,4 +1,4 @@
-# Seance 5 - Projet, bonnes pratiques et evaluation
+# Phase 5 - Projet, bonnes pratiques et evaluation
 
 ## Objectifs
 
@@ -9,7 +9,7 @@
 
 ## Retour sur le jalon autonome 3
 
-La seance commence par la verification de `make test` et `make memcheck`. Les
+La phase commence par la verification de `make test` et `make memcheck`. Les
 erreurs de capacite, de pointeur, de liberation et de rapport sont corrigees a
 partir du code apporte par les etudiants.
 

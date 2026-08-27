@@ -120,7 +120,7 @@ class QuizPlayer extends HTMLElement {
     this.updateQuizBadge(allCorrect);
 
     if (allCorrect) {
-      this.setFeedback(this.t("correct"), "success");
+      this.setFeedback();
       this.setValidateClass("btn-success");
       this.querySelector(".quiz-player__validate").textContent = this.t("validate");
       this.querySelector(".quiz-player__hint").classList.add("d-none");
@@ -147,9 +147,6 @@ class QuizPlayer extends HTMLElement {
     feedback.innerHTML = "";
     fieldset.classList.toggle("quiz-player__question--ok", correct);
     fieldset.classList.toggle("quiz-player__question--wrong", !correct && state.attempts > 0);
-    if (correct) {
-      feedback.innerHTML = `<div class="alert alert-success py-2 mt-2 mb-0">${this.escape(this.t("questionValid"))}</div>`;
-    }
   }
 
   toggleHintButton() {
@@ -178,7 +175,8 @@ class QuizPlayer extends HTMLElement {
   }
 
   setFeedback(message, type) {
-    this.querySelector(".quiz-player__feedback").innerHTML = `<div class="alert alert-${type} mb-0">${this.escape(message)}</div>`;
+    const feedback = this.querySelector(".quiz-player__feedback");
+    feedback.innerHTML = message ? `<div class="alert alert-${type} mb-0">${this.escape(message)}</div>` : "";
   }
 
   setValidateClass(className) {

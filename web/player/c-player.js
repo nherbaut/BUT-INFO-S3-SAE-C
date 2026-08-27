@@ -30,25 +30,26 @@ class CPlayer extends HTMLElement {
 
   render() {
     const title = this.exercise.title || this.t("defaultTitle");
-    const stdin = this.exercise.stdin || "";
+    const parameters = this.exercise.argv || this.exercise.stdin || "";
     const usesStdin = this.exercise.uses_stdin === true;
+    const usesArgs = this.exercise.uses_args === true;
     const runDisabled = this.browserRunnable ? "" : "disabled";
     const runnableLabel = this.browserRunnable ? "" : `<span class="c-player__badge">${this.escape(this.t("localOnly"))}</span>`;
     const kindLabel = this.contentKind
       ? `<span class="content-kind content-kind--${this.escape(this.contentKind)}"><span class="content-kind__icon" aria-hidden="true">${this.contentKind === "exercise" ? "&lt;/&gt;" : "{}"}</span>${this.escape(window.SAECMessages.t(`contentType.${this.contentKind}`))}</span>`
       : "";
-    const stdinBlock = this.browserRunnable
+    const parametersBlock = this.browserRunnable
       ? `
-            <details class="c-player__stdin-details" ${usesStdin ? "open" : ""}>
+            <details class="c-player__parameters-details" ${usesStdin || usesArgs ? "open" : ""}>
               <summary class="c-player__field-title">
-                ${this.escape(this.t("stdin"))}
+                ${this.escape(this.t("parameters"))}
                 <span
                   class="c-player__help"
                   tabindex="0"
-                  title="${this.escape(this.t("stdinHelp"))}"
+                  title="${this.escape(this.t("parametersHelp"))}"
                 >(?)</span>
               </summary>
-              <textarea class="c-player__stdin" spellcheck="false">${this.escape(stdin)}</textarea>
+              <textarea class="c-player__parameters" spellcheck="false">${this.escape(parameters)}</textarea>
             </details>`
       : "";
     const outputBlock = this.browserRunnable
@@ -62,13 +63,9 @@ class CPlayer extends HTMLElement {
       : "";
     const bodyClass = this.browserRunnable ? "c-player__body" : "c-player__body c-player__body--single";
     this.innerHTML = `
-      <div class="c-player${this.contentKind ? ` c-player--${this.escape(this.contentKind)}` : ""}">
+      <div class="c-player${this.contentKind ? ` c-player--${this.escape(this.contentKind)}` : ""}" tabindex="0">
         <div class="c-player__bar">
           <span class="c-player__title">${kindLabel}<span>${this.escape(title)}</span> ${runnableLabel}</span>
-          <span class="c-player__actions">
-            <button class="c-player__run" type="button" ${runDisabled}>${this.escape(this.t("run"))}</button>
-            <button class="c-player__reset" type="button">${this.escape(this.t("reset"))}</button>
-          </span>
         </div>
         <div class="c-player__note">
           <span class="c-player__status">${this.escape(this.t("initializing"))}</span>
@@ -82,14 +79,27 @@ class CPlayer extends HTMLElement {
                 <textarea class="c-player__code" spellcheck="false" ${this.readonly ? "readonly" : ""}>${this.escape(this.initialCode)}</textarea>
               </span>
             </label>
-            ${stdinBlock}
+            ${parametersBlock}
           </div>
           ${outputBlock}
+        </div>
+        <div class="c-player__footer">
+          <span class="c-player__actions">
+            <button class="c-player__run" type="button" ${runDisabled}>${this.escape(this.t("run"))} <kbd class="c-player__enter-key" aria-hidden="true">&#9166;</kbd></button>
+            <button class="c-player__reset" type="button">${this.escape(this.t("reset"))}</button>
+          </span>
         </div>
       </div>
     `;
     this.querySelector(".c-player__run").addEventListener("click", () => this.run());
     this.querySelector(".c-player__reset").addEventListener("click", () => this.reset());
+    const player = this.querySelector(".c-player");
+    player.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && event.target === player && !this.querySelector(".c-player__run").disabled) {
+        event.preventDefault();
+        this.run();
+      }
+    });
     this.setupCodeEditor();
     this.updateStatus();
   }
@@ -150,9 +160,9 @@ class CPlayer extends HTMLElement {
 
   reset() {
     this.setCode(this.initialCode);
-    const stdin = this.querySelector(".c-player__stdin");
-    if (stdin) {
-      stdin.value = this.exercise.stdin || "";
+    const parameters = this.querySelector(".c-player__parameters");
+    if (parameters) {
+      parameters.value = this.exercise.argv || this.exercise.stdin || "";
     }
     this.clearOutputs();
     this.refreshHighlight();
@@ -170,7 +180,8 @@ class CPlayer extends HTMLElement {
     }
 
     const source = this.getCode();
-    const stdin = this.querySelector(".c-player__stdin")?.value || "";
+    const parameters = this.querySelector(".c-player__parameters")?.value || "";
+    const argv = parameters.trim() ? parameters.trim().split(/\s+/).join("\n") : "";
 
     if (window.CCompilerRuntime?.run) {
       this.setStatus(this.t("compiling"));
@@ -178,7 +189,8 @@ class CPlayer extends HTMLElement {
         const result = await window.CCompilerRuntime.run({
           exercise: this.exercise,
           source,
-          stdin,
+          stdin: parameters,
+          argv,
         });
         this.show(result);
         const hasStderr = [result.compilerStderr, result.programStderr]

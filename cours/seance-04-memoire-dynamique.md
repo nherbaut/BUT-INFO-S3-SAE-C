@@ -1,4 +1,4 @@
-# Seance 4 - Memoire dynamique
+# Phase 4 - Memoire dynamique
 
 ## Objectifs
 

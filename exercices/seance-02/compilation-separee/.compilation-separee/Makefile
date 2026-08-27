@@ -4,9 +4,16 @@ CFLAGS = -Iinclude -std=c11 -Wall -Wextra -Wpedantic -g
 
 all: build/stats
 
-build/stats: src/main.c
+build/main.o: src/main.c include/projet/stats.h
 	mkdir -p build
-	cc $(CFLAGS) src/main.c -o build/stats
+	cc $(CFLAGS) -c src/main.c -o build/main.o
+
+build/stats.o: src/stats.c include/projet/stats.h
+	mkdir -p build
+	cc $(CFLAGS) -c src/stats.c -o build/stats.o
+
+build/stats: build/main.o build/stats.o
+	cc $(CFLAGS) build/main.o build/stats.o -o build/stats
 
 run: build/stats
 	./build/stats
