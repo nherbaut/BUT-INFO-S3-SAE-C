@@ -1,0 +1,15 @@
+{
+  "id": "seance-01-bilan-notes",
+  "title": "Bilan de cinq notes",
+  "statement": "Lire cinq notes entieres sur stdin. Les stocker dans un tableau, puis afficher leur somme, leur moyenne entiere, la note maximale et le nombre de notes superieures ou egales a 10.",
+  "sources": ["src/main.c"],
+  "main": "src/main.c",
+  "stdin": "8 10 12 15 9\n",
+  "expected_stdout": "somme = 54\nmoyenne = 10\nmax = 15\nnotes valides = 3\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

@@ -1,0 +1,4 @@
+somme = 54
+moyenne = 10
+max = 15
+notes valides = 3

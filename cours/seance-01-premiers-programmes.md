@@ -498,6 +498,7 @@ Le projet capteurs analysera des mesures de temperature fournies par une bibliot
 
 Le flux de donnée est récupéré sur le reseau (https) au format JSON, nous avons déjà écrit pour vous la partie du code qui réaliser la récupération et le parsing des données.
 Il faut reste à faire les tâches suivantes:
+
 - structures
 - les calculs
 - la memoire dynamique
@@ -524,3 +525,11 @@ Comptage des notes supérieures à 10 dans le tableau
 ```todo
 Somme des éléments d'un tableau d'entiers.
 ```
+
+### Exercice final : bilan de notes
+
+Cet exercice reprend les notions de cette phase : en-têtes, `main`, variables,
+tableau, boucle, condition, lecture avec `scanf`, affichage avec `printf` et
+retour de succès.
+
+{{ c_exercise: exercices/seance-01/bilan-notes }}
