@@ -1,7 +1,7 @@
 {
   "id": "seance-04-tableau-dynamique",
   "title": "Tableau dynamique",
-  "statement": "Allouer un tableau, l'agrandir avec realloc, calculer une somme puis liberer la memoire.",
+  "statement": "Complétez les étapes marquées TODO : agrandir le tableau avec realloc et un pointeur temporaire, initialiser les nouveaux éléments, calculer la somme puis libérer la mémoire. La sortie attendue est taille=5 somme=15.",
   "sources": ["src/main.c"],
   "main": "src/main.c",
   "stdin": "",

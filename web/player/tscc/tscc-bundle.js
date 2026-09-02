@@ -53581,30 +53581,125 @@ ${dataStr}`].filter(Boolean).join("\n");
   function mapErrors(errors) {
     return Array_exports.map(compilerErrorToText)(Array.isArray(errors) ? errors : [errors]).join("\n") + "\n";
   }
+  function inlineSimpleStringPromptFunctions(source) {
+    const helpers = [];
+    source.replace(/void\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*(?:const\s+)?char\s+([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*\]\s*,\s*int\s*\*\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*\{([\s\S]*?)\n\}/g, (_match, name, question, response, body) => {
+      helpers.push({ name, question, response, body });
+      return _match;
+    });
+    let transformed = source;
+    for (const helper of helpers) {
+      const escapedName = helper.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const callPattern = new RegExp(`${escapedName}\\s*\\(\\s*("(?:[^"\\\\]|\\\\.)*")\\s*,\\s*&\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\)\\s*;`, "g");
+      transformed = transformed.replace(callPattern, (_match, question, response) => {
+        const promptBody = helper.body
+          .replace(new RegExp(`\\b${helper.question}\\b`, "g"), question)
+          .replace(new RegExp(`\\b${helper.response}\\b`, "g"), `&${response}`);
+        return `{${promptBody}\n}`;
+      });
+    }
+    return transformed;
+  }
   function transformScanf(source, stdin) {
     const values3 = String(stdin || "").trim().split(/\s+/).filter(Boolean);
-    let valueIndex = 0;
-    const nextValue = () => {
-      const raw = values3[valueIndex++] ?? "0";
-      return /^-?\d+(\.\d+)?$/.test(raw) ? raw : "0";
+    const numericValues = values3.map((raw) => /^-?\d+(\.\d+)?$/.test(raw) ? raw : "0");
+    let usesScanf = false;
+    const targetsFrom = (args) => {
+      const addressedTargets = Array.from(
+        args.matchAll(/&\s*([A-Za-z_][A-Za-z0-9_]*(?:\s*\[\s*[^\]]+\s*\])*)/g),
+        (match7) => match7[1]
+      );
+      if (addressedTargets.length) {
+        return addressedTargets;
+      }
+      const pointerTarget = args.trim();
+      return /^[A-Za-z_][A-Za-z0-9_]*$/.test(pointerTarget) ? [`*${pointerTarget}`] : [];
     };
-    return source.replace(/scanf\s*\(\s*"[^"]*"\s*,\s*([^)]+)\)\s*;/g, (_match, args) => {
-      const names = Array.from(args.matchAll(/&\s*([A-Za-z_][A-Za-z0-9_]*)/g), (match7) => match7[1]);
-      return names.map((name) => `${name} = ${nextValue()};`).join("\n");
-    }).replace(/scanf\s*\(\s*"[^"]*"\s*,\s*([^)]+)\)/g, (_match, args) => {
-      const names = Array.from(args.matchAll(/&\s*([A-Za-z_][A-Za-z0-9_]*)/g), (match7) => match7[1]);
-      return String(names.length);
+    const assignment = (target) => {
+      const branches = numericValues.map((value, index) => {
+        const prefix = index === 0 ? "if" : "else if";
+        return `${prefix} (saec_browser_stdin_index == ${index}) {\n    ${target} = ${value};\n}`;
+      });
+      branches.push(`else {\n    ${target} = 0;\n}`);
+      branches.push("saec_browser_stdin_index++;");
+      return branches.join(" ");
+    };
+    const transformed = source.replace(/scanf\s*\(\s*"[^"]*"\s*,\s*([^)]+)\)\s*;/g, (match7, args) => {
+      const targets = targetsFrom(args);
+      if (!targets.length) {
+        return match7;
+      }
+      usesScanf = true;
+      return `{\n${targets.map(assignment).join("\n")}\n}`;
+    }).replace(/scanf\s*\(\s*"[^"]*"\s*,\s*([^)]+)\)/g, (match7, args) => {
+      const targets = targetsFrom(args);
+      if (!targets.length) {
+        return match7;
+      }
+      usesScanf = true;
+      return String(targets.length);
     });
+    if (!usesScanf) {
+      return transformed;
+    }
+    return `int saec_browser_stdin_index = 0;\n${transformed}`;
+  }
+  function flattenSimpleStructs(source) {
+    const structures = new Map();
+    source.replace(/struct\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([^}]*)\}\s*;/g, (_match, name, body) => {
+      const fields = Array.from(body.matchAll(/\bint\s+([A-Za-z_][A-Za-z0-9_]*)\s*;/g), (field) => field[1]);
+      if (fields.length) {
+        structures.set(name, fields);
+      }
+      return _match;
+    });
+    if (!structures.size) {
+      return source;
+    }
+    const localStructures = new Map();
+    let transformed = source;
+    for (const [name, fields] of structures) {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      transformed = transformed.replace(new RegExp(`\\bstruct\\s+${escapedName}\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*\\{([^}]*)\\}\\s*;`, "g"), (_match, variable, initializer) => {
+        localStructures.set(variable, fields);
+        const values = Object.fromEntries(fields.map((field) => [field, "0"]));
+        const parts = initializer.split(",").map((part) => part.trim()).filter(Boolean);
+        parts.forEach((part, index) => {
+          const designated = part.match(/^\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+          if (designated && fields.includes(designated[1])) {
+            values[designated[1]] = designated[2];
+          } else if (fields[index]) {
+            values[fields[index]] = part;
+          }
+        });
+        return fields.map((field) => `int ${variable}_${field} = ${values[field]};`).join("\n");
+      });
+      transformed = transformed.replace(new RegExp(`\\bstruct\\s+${escapedName}\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;`, "g"), (_match, variable) => {
+        localStructures.set(variable, fields);
+        return fields.map((field) => `int ${variable}_${field};`).join("\n");
+      });
+      transformed = transformed.replace(new RegExp(`\\b(?:const\\s+)?struct\\s+${escapedName}\\s*\\*\\s*([A-Za-z_][A-Za-z0-9_]*)`, "g"), (_match, variable) => fields.map((field) => `int *${variable}_${field}`).join(", "));
+      for (const field of fields) {
+        const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        transformed = transformed.replace(new RegExp(`\\b([A-Za-z_][A-Za-z0-9_]*)\\s*->\\s*${escapedField}\\b`, "g"), (_match, variable) => `*${variable}_${field}`);
+        transformed = transformed.replace(new RegExp(`\\b([A-Za-z_][A-Za-z0-9_]*)\\s*\\.\\s*${escapedField}\\b`, "g"), (_match, variable) => `${variable}_${field}`);
+      }
+    }
+    for (const [variable, fields] of localStructures) {
+      const escapedVariable = variable.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      transformed = transformed.replace(new RegExp(`&\\s*${escapedVariable}\\b`, "g"), fields.map((field) => `&${variable}_${field}`).join(", "));
+    }
+    return transformed;
   }
   function normalizeBrowserC(source) {
-    return source.replace(/%zu/g, "%d").replace(/sizeof\s+\*\s*[A-Za-z_][A-Za-z0-9_]*/g, "sizeof(int)").replace(/[A-Za-z_][A-Za-z0-9_]*\s*==\s*NULL/g, "0").replace(/NULL\s*==\s*[A-Za-z_][A-Za-z0-9_]*/g, "0").replace(/(int\s*\*\s*values\s*=\s*malloc\s*\([^;]+;\s*)/, "$1\n    int *resized;\n").replace(/int\s*\*\s*resized\s*=/g, "resized =").replace(/realloc\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,[^;]*\)/g, "$1");
+    return flattenSimpleStructs(source).replace(/%zu/g, "%d").replace(/\bEXIT_SUCCESS\b/g, "0").replace(/\bEXIT_FAILURE\b/g, "1").replace(/sizeof\s+\*\s*[A-Za-z_][A-Za-z0-9_]*/g, "sizeof(int)").replace(/[A-Za-z_][A-Za-z0-9_]*\s*==\s*NULL/g, "0").replace(/NULL\s*==\s*[A-Za-z_][A-Za-z0-9_]*/g, "0").replace(/(int\s*\*\s*values\s*=\s*malloc\s*\([^;]+;\s*)/, "$1\n    int *resized;\n").replace(/int\s*\*\s*resized\s*=/g, "resized =").replace(/realloc\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,[^;]*\)/g, "$1");
   }
   function renameBrowserReservedIdentifiers(source) {
     const reserved = new Set(["c"]);
     return source.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g, (match7) => reserved.has(match7) ? `__saec_${match7}` : match7);
   }
   function prepareSource(source, stdin) {
-    const transformed = renameBrowserReservedIdentifiers(normalizeBrowserC(transformScanf(source, stdin)));
+    const transformed = renameBrowserReservedIdentifiers(normalizeBrowserC(transformScanf(inlineSimpleStringPromptFunctions(source), stdin)));
     return transformed.replace(
       /int\s+main\s*\(([^)]*)\)\s*\{/,
       (_match, args) => `#include <kernel/textmode.h>

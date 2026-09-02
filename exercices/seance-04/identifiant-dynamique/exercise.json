@@ -1,0 +1,12 @@
+{
+  "id": "seance-04-identifiant-dynamique",
+  "title": "Construire un identifiant dynamique",
+  "statement": "Exercice local : construisez une nouvelle chaîne prenom.nom avec malloc, strlen, strcpy et strcat. Vérifiez-la avec strcmp, puis libérez-la.",
+  "sources": ["src/main.c", "README.md"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "Ada.Lovelace\nAlan.Turing\n",
+  "expected_stderr": "",
+  "browser_runnable": false,
+  "local": { "build": "make", "run": "make run", "test": "make test" }
+}

@@ -17,24 +17,16 @@ int main(void)
         values[i] = (int)i + 1;
     }
 
-    size = 5;
-    int *resized = realloc(values, size * sizeof *values);
-    if (resized == NULL) {
-        free(values);
-        perror("realloc");
-        return 1;
-    }
-    values = resized;
+    /*
+     * TODO 1 : passer size à 5, puis utiliser realloc avec un pointeur
+     * temporaire. En cas d'échec, libérer values avant de retourner 1.
+     */
 
-    values[3] = 4;
-    values[4] = 5;
+    /* TODO 2 : initialiser les deux nouveaux éléments à 4 et 5. */
 
-    for (i = 0; i < size; i++) {
-        sum += values[i];
-    }
+    /* TODO 3 : parcourir le tableau pour calculer sum. */
 
     printf("taille=%zu somme=%d\n", size, sum);
     free(values);
     return 0;
 }
-

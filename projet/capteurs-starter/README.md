@@ -14,7 +14,8 @@ https://tribequa.org/assets/data/sensors-history.json
 
 Le réseau et le JSON ne sont **pas** dans le périmètre du projet. Ils sont pris
 en charge par le code fourni. Votre travail porte sur les structures C, les
-fonctions, les tableaux dynamiques, la mémoire et le rapport terminal.
+fonctions, les tableaux dynamiques, la mémoire, les chaînes, les fichiers et
+les rapports terminal/CSV.
 
 ## Avant de commencer
 
@@ -25,10 +26,10 @@ make check-tools
 make
 ```
 
-Il faut disposer d'un compilateur C, de Make, de `pkg-config`, de la
-bibliothèque de développement `libcurl`, de `cppcheck` et de Valgrind. Sous
+Il faut disposer d'un compilateur C, de Make, de la bibliothèque de
+développement `libcurl`, de `cppcheck` et de Valgrind. Sous
 Debian ou Ubuntu, les paquets utiles sont notamment `build-essential`,
-`pkg-config`, `libcurl4-openssl-dev`, `cppcheck` et `valgrind`.
+`libcurl4-openssl-dev`, `cppcheck` et `valgrind`.
 
 Au départ, plusieurs tests échouent : c'est normal. Les fonctions à compléter
 contiennent des marqueurs `TODO`. Chaque jalon indique les tests qui doivent
@@ -41,8 +42,8 @@ passer avant de continuer.
 | `include/projet/` | Interfaces publiques : types et prototypes à lire avant de coder. |
 | `src/statistics.c` | Calcul du minimum, maximum, moyenne et écart moyen. |
 | `src/series.c` | Tableau dynamique de mesures. |
-| `src/report.c` | Construction du rapport affiché dans le terminal. |
-| `src/main.c` | Programme principal et traitement de `--url` / `--file`. |
+| `src/report.c` | Rapports terminal et CSV, ainsi que le libellé dynamique. |
+| `src/main.c` | Programme principal, arguments et ouverture du fichier CSV. |
 | `tests/` | Tests unitaires et jeu de données local déterministe. |
 | `provided/` | Code enseignant pour HTTP et JSON : ne pas modifier. |
 
@@ -57,22 +58,25 @@ utiliser pour charger les données.
 | `make` | Compile le programme `build/capteurs`. |
 | `make test-statistics` | Compile et exécute les tests des statistiques. |
 | `make test-series` | Compile et exécute les tests du tableau dynamique. |
+| `make test-report` | Compile et exécute les tests du rapport et du CSV. |
+| `make test-cli` | Vérifie un lancement complet avec fichier CSV. |
 | `make test` | Exécute tous les tests du projet. |
 | `make memcheck` | Exécute les tests avec Valgrind. |
-| `make cppcheck` | Analyse le code des étudiants dans `src/`. |
+| `make cppcheck` | Analyse votre code dans `src/`. |
 | `make clean` | Supprime les fichiers construits dans `build/`. |
 | `make pdf` | Génère le sujet PDF à partir de ce README. |
 
 Pour analyser le jeu de données local, une fois le projet terminé :
 
 ```sh
-./build/capteurs --file tests/data/sensors-history.json
+./build/capteurs --file tests/data/sensors-history.json \
+  --csv rapport.csv --label "Mesures locales"
 ```
 
 `make run` utilise le flux en ligne. Préférez le fichier de test local pour
 obtenir un résultat reproductible pendant le développement.
 
-## Jalon 1 - Prise en main et préparation
+## Jalon 1 - Prise en main (phases 1 et 2)
 
 Ce jalon ne demande pas encore d'implémenter les fonctions du projet.
 
@@ -80,18 +84,20 @@ Ce jalon ne demande pas encore d'implémenter les fonctions du projet.
 2. Exécutez `make check-tools`, puis `make`.
 3. Lisez les fichiers de `include/projet/`, `src/` et `tests/`.
 4. Lancez `make test` pour identifier les fonctions encore incomplètes.
-5. Proposez les signatures et les cas limites de fonctions de minimum et de
-   maximum sur un tableau de mesures.
+5. Repérez dans le Makefile les cibles `make`, `make test` et
+   `make test-statistics`.
 6. Créez un premier commit après votre prise en main du projet.
 
 **Attendu du jalon 1 :** vous savez compiler le projet, localiser les fichiers
 à modifier, expliquer le rôle de `src/`, `include/`, `tests/` et `provided/`,
-et décrire les statistiques à calculer.
+et expliquer la différence entre le code à compléter et le code fourni.
 
-## Jalon 2 - Statistiques sur un tableau existant
+## Jalon 2 - Fonctions, pointeurs et structures (phase 3)
 
 Le fichier `tests/test_statistics.c` construit déjà un tableau de mesures sur
-la pile. À ce jalon, vous ne devez utiliser ni `malloc` ni `realloc`.
+la pile. À ce jalon, vous ne devez utiliser ni `malloc` ni `realloc` : vous
+mettez en œuvre les fonctions, pointeurs, structures et énumérations de la
+phase 3.
 
 Dans `src/statistics.c`, implémentez :
 
@@ -114,9 +120,10 @@ make cppcheck
 réalisés à partir des données d'un tableau existant, sans allocation dynamique.
 Faites un commit décrivant les statistiques terminées.
 
-## Jalon 3 - Série dynamique et rapport terminal
+## Jalon 3 - Mémoire dynamique, chaînes et fichiers (phase 4)
 
-Dans `src/series.c`, complétez le cycle de vie de `MeasureSeries` :
+Ce jalon final réunit les notions de la phase 4. Commencez par compléter le
+cycle de vie de `MeasureSeries` dans `src/series.c` :
 
 1. `measure_series_append` doit allouer une première capacité avec `malloc` à
    la première insertion.
@@ -126,25 +133,68 @@ Dans `src/series.c`, complétez le cycle de vie de `MeasureSeries` :
 4. `measure_series_clear` doit libérer le tableau avec `free` puis remettre la
    série dans son état initial.
 
-Dans `src/report.c`, utilisez les fonctions de statistiques pour afficher :
+### 1. Gérer le libellé et afficher le rapport
 
-- le nombre de mesures et la date de mise à jour ;
-- minimum, maximum et moyenne des températures intérieure et extérieure ;
-- l'écart intérieur-extérieur moyen.
+Dans `src/report.c`, `sensor_report_options_init` doit refuser un libellé nul,
+vide ou contenant une virgule, un guillemet ou un retour à la ligne. Copiez un
+libellé valide dans une zone allouée dynamiquement avec les fonctions de
+`string.h` et `malloc`. `sensor_report_options_clear` doit ensuite libérer
+cette zone, même après un chemin d'erreur, et remettre le pointeur à `NULL`.
+
+Utilisez ensuite les fonctions de statistiques dans `sensor_report_print` pour
+afficher le libellé, le nombre de mesures, la date de mise à jour, les
+minimums, maximums et moyennes intérieur/extérieur, ainsi que l'écart moyen.
+
+### 2. Analyser les arguments
+
+Dans `src/main.c`, implémentez `parse_options` avec une boucle sur `argv` et
+`strcmp`. La commande doit respecter la forme suivante, les options pouvant
+être placées dans n'importe quel ordre :
+
+```sh
+./build/capteurs [--url URL | --file FICHIER] --csv FICHIER --label TEXTE
+```
+
+- `--csv` et `--label` sont obligatoires et ne peuvent apparaître qu'une fois ;
+- `--url` et `--file` sont exclusifs ;
+- sans `--url` ni `--file`, l'URL par défaut est employée ;
+- une option inconnue, dupliquée ou sans valeur doit afficher l'usage et
+  produire le code de sortie `2`.
+
+### 3. Écrire la synthèse CSV
+
+`write_csv_report` doit ouvrir le chemin reçu avec `fopen("w")`, appeler
+`sensor_report_write_csv`, détecter une erreur d'écriture ou de fermeture, puis
+fermer le fichier dans tous les cas. L'export contient exactement un en-tête et
+une ligne de synthèse. Les colonnes, séparées par des virgules, sont les
+suivantes dans cet ordre :
+
+1. `label`, `updated_at`, `count` ;
+2. `indoor_minimum`, `indoor_maximum`, `indoor_average` ;
+3. `outdoor_minimum`, `outdoor_maximum`, `outdoor_average` ;
+4. `average_gap`.
+
+Par exemple, pour le libellé `Mesures locales`, les valeurs sont `3`, `27.20`,
+`27.50`, `27.33`, `27.60`, `27.90`, `27.77` et `-0.43`, après la date de mise à
+jour.
+
+Les six valeurs statistiques et l'écart sont écrits avec deux décimales. La
+fonction doit retourner `0` si ses arguments sont invalides, si la série est
+vide, si un calcul échoue ou si une écriture échoue.
 
 Validez la version candidate avec :
 
 ```sh
-make test-series
 make test
 make cppcheck
 make memcheck
-./build/capteurs --file tests/data/sensors-history.json
+./build/capteurs --file tests/data/sensors-history.json \
+  --csv rapport.csv --label "Mesures locales"
 ```
 
-**Attendu du jalon 3 :** tous les tests passent, Valgrind ne signale aucune
-erreur ni fuite, et le programme produit un rapport à partir du fichier local.
-Faites un commit de version candidate avant la phase de finalisation.
+**Attendu du jalon 3 :** tous les tests passent, le CSV possède le format
+attendu, et Valgrind ne signale aucune erreur ni fuite. Faites un commit de
+version candidate avant la finalisation.
 
 ## Travail personnel et évaluation
 
@@ -153,8 +203,11 @@ votre branche personnelle et réalisez des commits réguliers qui décrivent les
 étapes significatives de votre progression.
 
 L'évaluation individuelle demandera de lire, expliquer et modifier votre propre
-code en temps contraint. Conservez donc un projet que vous comprenez et que
-vous êtes capable de reconstruire avec `make`, `make test` et `make memcheck`.
+code en temps contraint. Elle peut porter sur le parcours de `argv`, la
+propriété du libellé, les pointeurs de structure, les erreurs de fichier ou
+une modification des statistiques. Conservez donc un projet que vous
+comprenez et que vous êtes capable de reconstruire avec `make`, `make test` et
+`make memcheck`.
 
 ## Périmètre fourni
 

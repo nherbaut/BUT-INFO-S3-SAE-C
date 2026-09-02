@@ -1,8 +1,8 @@
 CC ?= cc
-CPPFLAGS ?= -Iinclude -Iprovided/cjson $(shell pkg-config --cflags libcurl)
+CPPFLAGS ?= -Iinclude -Iprovided/cjson
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -g
 LDFLAGS ?=
-LDLIBS ?= -lm $(shell pkg-config --libs libcurl)
+LDLIBS ?= -lm -lcurl
 
 VALGRIND ?= valgrind
 VALGRIND_FLAGS ?= \
@@ -21,6 +21,7 @@ PROJECT_PDF := $(BUILD_DIR)/projet-capteurs.pdf
 TEST_STATISTICS := $(BUILD_DIR)/test_statistics
 TEST_SERIES := $(BUILD_DIR)/test_series
 TEST_SOURCE := $(BUILD_DIR)/test_source
+TEST_REPORT := $(BUILD_DIR)/test_report
 LIB_OBJS := \
 	$(BUILD_DIR)/series.o \
 	$(BUILD_DIR)/statistics.o \
@@ -28,7 +29,7 @@ LIB_OBJS := \
 	$(BUILD_DIR)/report.o \
 	$(BUILD_DIR)/cJSON.o
 
-.PHONY: all run test test-statistics test-series test-source memcheck memcheck-tests memcheck-run memcheck-scenario check-tools cppcheck pdf clean student-tarball
+.PHONY: all run test test-statistics test-series test-source test-report test-cli memcheck memcheck-tests memcheck-run memcheck-scenario check-tools cppcheck pdf clean student-tarball
 
 all: $(PROGRAM)
 
@@ -62,6 +63,9 @@ $(BUILD_DIR)/test_series.o: tests/test_series.c include/projet/series.h | $(BUIL
 $(BUILD_DIR)/test_source.o: tests/test_source.c include/projet/sensor_source.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/test_report.o: tests/test_report.c include/projet/report.h include/projet/statistics.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 $(PROGRAM): $(BUILD_DIR)/main.o $(LIB_OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
@@ -75,10 +79,13 @@ $(TEST_SERIES): $(BUILD_DIR)/test_series.o $(BUILD_DIR)/series.o
 $(TEST_SOURCE): $(BUILD_DIR)/test_source.o $(BUILD_DIR)/series.o $(BUILD_DIR)/sensor_source.o $(BUILD_DIR)/cJSON.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
+$(TEST_REPORT): $(BUILD_DIR)/test_report.o $(BUILD_DIR)/report.o $(BUILD_DIR)/statistics.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
 run: $(PROGRAM)
 	./$(PROGRAM)
 
-test: test-statistics test-series test-source
+test: test-statistics test-series test-source test-report test-cli
 
 test-statistics: $(TEST_STATISTICS)
 	./$(TEST_STATISTICS)
@@ -89,12 +96,19 @@ test-series: $(TEST_SERIES)
 test-source: $(TEST_SOURCE)
 	./$(TEST_SOURCE)
 
+test-report: $(TEST_REPORT)
+	./$(TEST_REPORT)
+
+test-cli: $(PROGRAM)
+	sh tests/test_cli.sh ./$(PROGRAM)
+
 memcheck: memcheck-tests
 
-memcheck-tests: $(TEST_STATISTICS) $(TEST_SERIES) $(TEST_SOURCE)
+memcheck-tests: $(TEST_STATISTICS) $(TEST_SERIES) $(TEST_SOURCE) $(TEST_REPORT)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_STATISTICS)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SERIES)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SOURCE)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_REPORT)
 
 memcheck-run: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
@@ -105,8 +119,6 @@ memcheck-scenario: $(PROGRAM)
 check-tools:
 	@command -v $(CC) >/dev/null || { echo "Compilateur C introuvable: $(CC)"; exit 1; }
 	@command -v $(MAKE) >/dev/null || { echo "Make introuvable"; exit 1; }
-	@command -v pkg-config >/dev/null || { echo "pkg-config introuvable"; exit 1; }
-	@pkg-config --exists libcurl || { echo "Bibliothèque libcurl introuvable"; exit 1; }
 	@command -v cppcheck >/dev/null || { echo "cppcheck introuvable"; exit 1; }
 	@command -v $(VALGRIND) >/dev/null || { echo "Valgrind introuvable"; exit 1; }
 	@echo "Environnement de développement prêt."
@@ -114,8 +126,8 @@ check-tools:
 cppcheck:
 	cppcheck --enable=warning,style,performance,portability --std=c11 --error-exitcode=1 --suppress=missingIncludeSystem -Iinclude src
 
-pdf: README.md | $(BUILD_DIR)
-	pandoc --standalone --metadata title="Projet capteurs SAE-C" README.md -o $(PROJECT_PDF)
+pdf: SUJET.md | $(BUILD_DIR)
+	pandoc --standalone --metadata title="Projet capteurs SAE-C" SUJET.md -o $(PROJECT_PDF)
 
 student-tarball:
 	python3 ../../tools/export_capteurs_starter.py

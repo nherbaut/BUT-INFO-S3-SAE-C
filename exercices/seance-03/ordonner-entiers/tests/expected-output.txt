@@ -1,0 +1,3 @@
+ordonne: a=1 b=2
+inverse: a=1 b=2
+egal: a=4 b=4

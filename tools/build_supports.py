@@ -42,6 +42,8 @@ SENSORS_PROJECT = ROOT / "projet" / "capteurs-starter"
 SENSORS_PROJECT_PDF = SENSORS_PROJECT / "build" / "projet-capteurs.pdf"
 MILESTONES_PAGE = "jalons.html"
 MILESTONES_PATH = COURSES / "jalons.md"
+EVALUATION_PAGE = "evaluation.html"
+EVALUATION_PATH = COURSES / "evaluation.md"
 ADMIN_PAGE = "admin.html"
 LIVE_CODE_PAGE = "live-code.html"
 LIVE_QUIZ_PAGE = "live-quiz.html"
@@ -761,7 +763,7 @@ def run_pandoc(markdown, output_path, html_mode, title=None):
             "player/c-player.css",
         ]
         if TSCC_RUNTIME.exists():
-            command.extend(["--include-after-body", str(TSCC_RUNTIME)])
+            command.extend(["--include-after-body", str(TSCC_INCLUDE)])
         command.extend(
             [
                 "--include-after-body",
@@ -1119,7 +1121,7 @@ def landing_page():
   draw();
 }})();
 </script>
-{read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{tscc_script_tag()}
 {codemirror_script_tags()}
 {read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "c-player.js")}
@@ -1157,7 +1159,7 @@ def live_code_page():
   <div data-live-code-target></div>
 </main>
 {site_footer()}
-{read_text(PLAYER_SRC / "tscc" / "tscc-runtime.js")}
+{tscc_script_tag()}
 {codemirror_script_tags()}
 {read_text(PLAYER_SRC / "messages.js")}
 {read_text(PLAYER_SRC / "c-player.js")}
@@ -2266,6 +2268,7 @@ def main():
         shutil.rmtree(VENDOR_DST)
     shutil.copytree(VENDOR_SRC, VENDOR_DST)
     write_codemirror_include()
+    write_tscc_include()
 
     courses = course_infos()
     all_starters = all_exercises()
@@ -2295,6 +2298,10 @@ def main():
     milestones_source = read_text(MILESTONES_PATH)
     run_pandoc(expand_markdown(milestones_source, html_mode=True), BUILD / MILESTONES_PAGE, True, "Jalons autonomes")
     postprocess_doc_page(BUILD / MILESTONES_PAGE, courses, MILESTONES_PAGE, "course")
+
+    evaluation_source = read_text(EVALUATION_PATH)
+    run_pandoc(expand_markdown(evaluation_source, html_mode=True), BUILD / EVALUATION_PAGE, True, "Évaluation de la SAE C")
+    postprocess_doc_page(BUILD / EVALUATION_PAGE, courses, EVALUATION_PAGE, "course")
 
     admin_flow = []
     for course in courses:

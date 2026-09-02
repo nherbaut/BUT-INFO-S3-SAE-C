@@ -1,0 +1,12 @@
+{
+  "id": "seance-04-diagnostiquer-valgrind",
+  "title": "Diagnostiquer des erreurs mémoire avec Valgrind",
+  "statement": "Exercice local : corrigez les quatre scénarios, puis lancez make memcheck jusqu'à ce que Valgrind ne signale plus aucune erreur.",
+  "sources": ["src/main.c", "README.md"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "",
+  "expected_stderr": "",
+  "browser_runnable": false,
+  "local": { "build": "make", "run": "make run SCENARIO=fuite", "test": "make test" }
+}

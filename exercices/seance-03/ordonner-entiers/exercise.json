@@ -1,0 +1,15 @@
+{
+  "id": "seance-03-ordonner-entiers",
+  "title": "Ordonner deux entiers par pointeurs",
+  "statement": "Complétez ordonner_entiers : si *a est supérieur à *b, appelez echanger_entiers(a, b). Le programme vérifie un couple déjà ordonné, un couple inversé et deux valeurs égales.",
+  "sources": ["src/main.c"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "ordonne: a=1 b=2\ninverse: a=1 b=2\negal: a=4 b=4\n",
+  "expected_stderr": "",
+  "local": {
+    "build": "make",
+    "run": "make run",
+    "test": "make test"
+  }
+}

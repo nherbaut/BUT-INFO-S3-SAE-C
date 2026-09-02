@@ -11,6 +11,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SOLUTION_PROJECT = ROOT / "projet" / "capteurs-corrige"
+STUDENT_SUBJECT = ROOT / "projet" / "capteurs-starter" / "SUJET.md"
 OUTPUT = ROOT / "dist" / "capteurs-starter.tar.gz"
 STUDENT_DEFINE = "STUDENT_VERSION"
 INCLUDE_DIRECTIVE = re.compile(r"^(\s*#\s*include\s+[^\n]+)$", re.MULTILINE)
@@ -53,6 +54,10 @@ def main():
             archive_root,
             ignore=shutil.ignore_patterns("build", "dist", "__pycache__"),
         )
+        teacher_readme = archive_root / "README.md"
+        if teacher_readme.exists():
+            teacher_readme.unlink()
+        shutil.copy2(STUDENT_SUBJECT, archive_root / "SUJET.md")
         for source_path in (archive_root / "src").glob("*.c"):
             source_path.write_text(student_source(source_path), encoding="utf-8")
         with tarfile.open(OUTPUT, "w:gz") as archive:

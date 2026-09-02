@@ -2,6 +2,9 @@
 
 Les jalons structurent le travail personnel à réaliser entre les phases encadrées.
 
+Les modalités de rendu et la répartition de la note sont décrites dans la page
+[Évaluation de la SAE C](evaluation.html).
+
 ## Jalon autonome 1 - Comprendre le projet
 
 Sans modifier le projet, clonez le dépôt, ouvrez le projet dans VS Code et

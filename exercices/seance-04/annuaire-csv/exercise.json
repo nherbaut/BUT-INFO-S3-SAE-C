@@ -1,0 +1,12 @@
+{
+  "id": "seance-04-annuaire-csv",
+  "title": "Sauvegarder et relire un annuaire CSV",
+  "statement": "Exercice local : écrivez l'annuaire initialisé dans main au format CSV, puis lisez ce fichier pour reconstruire un nouvel annuaire dynamique.",
+  "sources": ["src/main.c", "README.md"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "Ada Lovelace (10/12/1815)\nAlan Turing (23/06/1912)\n",
+  "expected_stderr": "",
+  "browser_runnable": false,
+  "local": { "build": "make", "run": "make run", "test": "make test" }
+}

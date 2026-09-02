@@ -1,0 +1,11 @@
+{
+  "id": "seance-03-duree",
+  "title": "Exercice final : normaliser une durée",
+  "statement": "Complétez normaliser_duree en utilisant le pointeur vers struct Duree reçu. Les minutes et secondes finales doivent être comprises entre 0 et 59.",
+  "sources": ["src/main.c"],
+  "main": "src/main.c",
+  "stdin": "",
+  "expected_stdout": "duree = 2 h 4 min 18 s\n",
+  "expected_stderr": "",
+  "local": { "build": "make", "run": "make run", "test": "make test" }
+}

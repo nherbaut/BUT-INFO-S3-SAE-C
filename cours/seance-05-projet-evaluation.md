@@ -44,22 +44,24 @@ completent les tests utiles et verifient la memoire avec Valgrind.
 
 ## Travail personnel et traçabilité
 
-Le code rendu doit être écrit sans recours à une IA générative. Le dépôt doit
-montrer une progression régulière, avec des commits personnels décrivant les
-étapes significatives du travail. Les étudiants peuvent consulter la
-documentation, les supports, les manuels et les exemples fournis ; en cas de
+Le dépôt doit montrer une progression régulière, avec des commits personnels
+décrivant les étapes significatives du travail. Les étudiants peuvent consulter
+la documentation, les supports, les manuels et les exemples fournis ; en cas de
 doute sur une ressource, ils la signalent à l'enseignant.
 
 L'historique Git sert à suivre la progression, mais ne constitue pas à lui seul
 une preuve d'auteur. L'évaluation individuelle sur machine repose sur le code
 apporté par l'étudiant et sur sa capacité à le lire, l'expliquer et le modifier.
 
-## Evaluation individuelle
+## Évaluation
 
-Les 30 dernieres minutes sont consacrees a une modification individuelle du
-projet: lecture d'un test, correction d'un calcul, ajout d'un cas limite ou
-explication d'un choix de memoire. La version livree doit compiler avec `make`
-et passer `make test` et `make memcheck`.
+Consultez les [modalités d'évaluation de la SAE C](evaluation.html) pour le
+nom attendu du dépôt, l'ajout de l'enseignant comme mainteneur, la répartition
+de la note et le déroulement du DS individuel de 45 minutes dans la branche
+`ds`.
+
+La version utilisée pendant le DS doit compiler avec `make` et passer `make
+test` et `make memcheck` avant l'évaluation.
 
 ## Depot attendu
 
@@ -68,3 +70,4 @@ et passer `make test` et `make memcheck`.
 - Makefile fonctionnel;
 - tests verts et absence de fuite signalee par Valgrind.
 - historique Git avec commits personnels et réguliers.
+- branche `ds` créée pendant le DS pour la fonctionnalité individuelle.

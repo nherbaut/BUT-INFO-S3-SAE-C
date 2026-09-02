@@ -1,127 +1,156 @@
-# Phase 3 - Fonctions et pointeurs
+# Phase 3 - Fonctions, pointeurs et structures
 
 ## Objectifs
 
-- Comprendre les fonctions C.
-- Installer un modele unique : les arguments sont passes par copie.
-- Manipuler des pointeurs sans multiplier les modeles mentaux.
-- Manipuler les chaines C et les pointeurs generiques `void *`.
-- Definir et manipuler des structures par valeur et par pointeur.
+- Comprendre que les arguments C sont toujours passés par copie.
+- Transmettre une adresse pour modifier une variable de l'appelant.
+- Distinguer pointeur et valeur pointée avec `*`.
+- Écrire des fonctions d'échange, d'ordonnancement et de normalisation.
+- Déclarer une structure et accéder à ses champs avec `.` et `->`.
+- Tester avec `assert`.
 
-## Fonctions C et methodes Java
+## Passage par valeur et adresse
 
-## Prototypes
+Une fonction C reçoit toujours des copies de ses arguments. Modifier un
+paramètre entier ne modifie donc pas la variable de l'appelant. Pour déposer
+un résultat dans cette variable, on transmet une copie de son adresse avec `&`.
 
-## Passage d'arguments par copie
+```c
+#include <stdio.h>
 
-## Copier une valeur
+#include <stdio.h>
 
-## Copier une adresse
+void demander_entier(const char question[], int *adresse_reponse)
+{
+    printf("%s\n", question);
+    scanf("%d", adresse_reponse);
+}
+
+int main(void)
+{
+    int a;
+    int b;
+
+    demander_entier("Combien vaut a ?", &a);
+    demander_entier("Combien vaut b ?", &b);
+    printf("la somme vaut %d\n", a + b);
+    return 0;
+}
+
+```
+
+`adresse_reponse` contient déjà une adresse : il ne faut donc pas écrire
+`&adresse_reponse` dans l'appel a `scanf`.
 
 ::: quiz {#quiz-s3-passage}
 title: Passage d'arguments
 
 ::: question {#q-s3-copie-adresse}
-title: Que recoit une fonction appelee avec `f(&x)` ?
+title: Que reçoit une fonction appelée avec `f(&x)` ?
 description: On veut modifier indirectement une variable externe.
 
 - [ ] La variable `x` elle-meme
   hint: Les arguments C sont toujours passes par copie.
 - [x] Une copie de l'adresse de `x`
-- [ ] Une reference Java vers `x`
+- [ ] Une référence vers `x`
 :::
 :::
 
-## Modifier une variable locale pointeur
+## Pointeurs et déréférencement
 
-## Modifier l'objet pointe
-
-## Chaines de caracteres
-
-Une chaine C est un tableau de `char` termine par le caractere nul `\0`.
-Cette terminaison fait partie des donnees: elle permet aux fonctions de savoir
-ou la chaine s'arrete.
-
-Les fonctions usuelles sont `strlen` pour mesurer une chaine, `strcmp` pour la
-comparer, `memcpy` pour copier des octets et `snprintf` pour produire un texte
-borne. Une copie de chaine doit reserver une place supplementaire pour `\0`.
+Dans `int *adresse_reponse`, `*adresse_reponse` désigne l'entier stocké à
+l'adresse pointée. On peut donc lire ou modifier la variable de l'appelant.
 
 ```c
-#include <stdio.h>
-#include <string.h>
-
-int main(void)
+void demander_entier_positif(const char question[], int *adresse_reponse)
 {
-    const char source[] = "C11";
-    char destination[16];
-    size_t length = strlen(source);
-
-    memcpy(destination, source, length + 1);
-    printf("%s (%zu caracteres)\n", destination, length);
-    return 0;
+    do {
+        printf("%s\\n", question);
+        scanf("%d", adresse_reponse);
+    } while (*adresse_reponse < 0);
 }
 ```
 
-## Pointeur generique `void *` et callback
+Comparer `adresse_reponse < 0` comparerait une adresse, pas la valeur lue.
+Dans `int *p, q;`, seul `p` est un pointeur ; `q` est un entier. Préférez une
+déclaration par ligne.
 
-`void *` est une adresse sans type precis. Une fonction qui recoit une telle
-adresse doit savoir quel objet est reellement pointe et la convertir avant de
-l'utiliser. Une fonction peut aussi etre passee comme valeur: c'est un callback.
-La bibliotheque fournie du projet capteurs emploie ce mecanisme pour recevoir les
-octets telecharges; les etudiants ne l'implementent pas dans le projet.
+::: quiz {#quiz-s3-declaration-pointeur}
+title: Lire une déclaration de pointeur
 
-```c
-#include <stdio.h>
+::: question {#q-s3-int-star-p-q}
+title: Quels sont les types dans `int *p, q;` ?
+description: L'étoile appartient au déclarateur de `p`.
 
-typedef void (*Callback)(void *data);
+- [x] `p` est un pointeur vers `int` et `q` est un `int`
+- [ ] `p` et `q` sont tous les deux des pointeurs vers `int`
+  hint: Il faudrait écrire `int *p, *q;`.
+- [ ] `p` est un `int` et `q` est un pointeur vers `int`
+:::
+:::
 
-static void afficher_entier(void *data)
-{
-    int *value = data;
+## Échanger et ordonner deux entiers
 
-    printf("%d\n", *value);
-}
-
-int main(void)
-{
-    int value = 42;
-    Callback callback = afficher_entier;
-
-    callback(&value);
-    return 0;
-}
-```
+Pour échanger deux valeurs, une fonction doit recevoir leurs adresses et les
+déréférencer. L'exemple compare l'échange par valeur et l'échange par pointeur.
 
 {{ c_demo: exercices/seance-03/swap }}
 
-## Definir une `struct`
+{{ c_exercise: exercices/seance-03/ordonner-entiers }}
 
-## Initialiser une structure
+## Structures
 
-## Passer une structure par valeur
+Une structure regroupe des valeurs qui décrivent la même entité. Le mot-clé
+`struct` fait partie du nom du type.
 
-## Passer une structure par pointeur
+```c
+struct Duree {
+    int heures;
+    int minutes;
+    int secondes;
+};
 
-Les types `TemperatureMeasure`, `MeasureSeries` et `TemperatureStatistics` du
-projet capteurs sont les structures a lire avant le travail autonome.
+struct Duree pause = {
+    .heures = 1,
+    .minutes = 23,
+    .secondes = 45
+};
 
-## Structures contenant des pointeurs
-
-{{ c_exercise: exercices/seance-03/etudiants }}
-
-## Visualiser avec Python Tutor C
-
-## Tester localement
-
-```bash
-cd exercices/seance-03/swap
-make test
+void ajouter_une_minute(struct Duree *duree)
+{
+    duree->minutes++;
+    /* equivalent a : (*duree).minutes++; */
+}
 ```
 
-## Exercices proposes
+Les initialiseurs désignés rendent le code lisible. On utilise `.` avec une
+structure et `->` avec un pointeur vers une structure.
 
-- Fonctions `min`, `max`, `moyenne`.
-- `swap` impossible par valeurs.
-- `swap` avec pointeurs.
-- Fonction qui produit deux resultats via pointeurs.
-- Structure contenant une chaine, une valeur et un pointeur.
+## Tester avec `assert`
+
+`assert(condition)` arrête le programme si la condition est fausse et indique
+la ligne fautive. Il permet de tester des cas normaux et limites sans saisie.
+
+```c
+#include <assert.h>
+
+assert(minutes >= 0 && minutes < 60);
+assert(secondes >= 0 && secondes < 60);
+```
+
+Une fonction comme `afficher_duree(const struct Duree *duree)` reçoit une
+adresse pour éviter de copier la structure. `const` interdit sa modification.
+
+## Exercice final : normaliser une durée
+
+Une durée peut avoir plus de 59 minutes ou secondes. Complétez
+`normaliser_duree` : elle reçoit l'adresse d'une `struct Duree` et doit
+modifier ses champs avec la notation `->`. La structure est initialisée avec
+les valeurs `0`, `123` et `78` ; le programme doit afficher `2 h 4 min 18 s`.
+
+Cet exercice de synthèse réunit l'initialisation d'une structure, le passage de
+son adresse avec `&`, le déréférencement et la notation `->`. Il est entièrement
+exécutable dans le navigateur.
+
+{{ c_exercise: exercices/seance-03/duree }}
+

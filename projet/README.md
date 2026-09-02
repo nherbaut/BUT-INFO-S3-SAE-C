@@ -18,7 +18,7 @@ Pour produire l'archive etudiante de ce projet:
 make capteurs-student-tarball
 ```
 
-Puis consulter `capteurs-starter/README.md`.
+Puis consulter `capteurs-starter/SUJET.md`.
 
 ---
 
@@ -40,4 +40,4 @@ make clean
 
 Le projet capteurs suit quatre jalons: prise en main autonome, statistiques sur
 pile, serie dynamique avec Valgrind, puis version candidate pour l'evaluation.
-Consulter `capteurs-starter/README.md` pour les dates et commandes associees.
+Consulter `capteurs-starter/SUJET.md` pour les dates et commandes associees.

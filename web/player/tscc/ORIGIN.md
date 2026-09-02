@@ -11,7 +11,15 @@ Limites assumees pour les supports:
 
 - ce n'est pas GCC/Clang;
 - pas de compilation multi-fichiers dans le navigateur;
-- `scanf(...)` simple est transforme en affectations depuis le champ `stdin`;
+- les appels numériques à `scanf(...)` employés comme instructions sont
+  transformés en lectures depuis le champ `stdin` ; les lectures répétées dans
+  une boucle et les cibles de type `tableau[indice]` sont prises en charge ;
+- les assistants simples recevant une question (`const char[]`) et un pointeur
+  vers `int`, tels que `demander_entier`, sont développés à l'appel afin que
+  leur question s'affiche correctement ;
+- les structures simples composées de champs `int` sont aplaties pour contourner
+  une limite du compilateur embarqué ; l'initialisation, `.` et `->` restent
+  utilisables dans le code affiché ;
 - les arguments `argc` et `argv` sont adaptés par `c-runtime-adapter.js` pour
   les signatures usuelles de `main`; cette adaptation est propre au support et
   ne remplace pas l'exécution locale;

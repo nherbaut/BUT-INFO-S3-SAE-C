@@ -8,26 +8,26 @@
 
 - Situer le langage C dans la programmation système.
 - Lire et expliquer un programme C minimal.
-- Compiler et executer un programme court dans le navigateur.
-- Retrouver le meme exercice dans le depot local.
-- Identifier les ressemblances et differences initiales avec Java.
+- Compiler et exécuter un programme court dans le navigateur.
+- Retrouver le même exercice dans le dépôt local.
+- Identifier les ressemblances et différences initiales avec Java.
 - Manipuler des variables, conditions, boucles et tableaux simples.
 
 ![Programmation d'application, programmation système et rôle du C](assets/why_c.png){.course-full-width-image}
 
 ### Pourquoi programmer en C ?
 
-Ce cours prepare la programmation système. La **programmation d'application** vise souvent a construire des **logiciels** directement **utiles aux utilisateurs**. La **programmation système construit** plutôt les **outils**, **bibliothèques** et **interfaces** utilisées par d'autres programmes.
+Ce cours prépare la programmation système. La **programmation d'application** vise souvent à construire des **logiciels** directement **utiles aux utilisateurs**. La **programmation système construit** plutôt les **outils**, **bibliothèques** et **interfaces** utilisées par d'autres programmes.
 
-Une bibliothèque expose une interface de programmation, ou API : une liste de fonctions, types et constantes que le programmeur peut appeler. L'API UNIX est historiquement conçue pour être utilisée en C. Comprendre le C aide donc a lire la documentation système, a appeler les fonctions du système et a comprendre ce qui se passe sous les abstractions plus haut niveau.
+Une bibliothèque expose une interface de programmation, ou API : une liste de fonctions, types et constantes que le programmeur peut appeler. L'API UNIX est historiquement conçue pour être utilisée en C. Comprendre le C aide donc à lire la documentation système, à appeler les fonctions du système et à comprendre ce qui se passe sous les abstractions plus haut niveau.
 
-Le C est aussi un langage proche de la machine : les valeurs, les adresses, les zones mémoire et les fichiers y sont manipules explicitement. Cette proximité est une contrainte, mais aussi un outil pour former un modèle mental solide de l'execution d'un programme.
+Le C est aussi un langage proche de la machine : les valeurs, les adresses, les zones mémoire et les fichiers y sont manipulés explicitement. Cette proximité est une contrainte, mais aussi un outil pour former un modèle mental solide de l'exécution d'un programme.
 
 L'absence d'abstraction contrairement aux languages de plus haut niveau permet d'obtenir des programmes plus économes en mémoire, énergie et plus rapides d'exécution au détriment d'une gymnastique intellectuelle plus complexe.
 
 ```remember
 
-Le langage C apparait au debut des années 1970, dans le contexte du système UNIX, avec Dennis Ritchie et Ken Thompson. Il est influence par BCPL et B, puis popularise par le livre *The C Programming Language* de Brian Kernighan et Dennis Ritchie.
+Le langage C apparaît au début des années 1970, dans le contexte du système UNIX, avec Dennis Ritchie et Ken Thompson. Il est influencé par BCPL et B, puis popularisé par le livre *The C Programming Language* de Brian Kernighan et Dennis Ritchie.
 
 Quelques repères suffisent pour ce cours :
 
@@ -49,14 +49,14 @@ description: On cherche surtout le lien avec les API système.
 - [x] Parce que l'API UNIX est historiquement exposée en C
 - [ ] Parce que le C cache toujours la mémoire au programmeur
   hint: Au contraire, le C rend beaucoup de manipulations mémoire explicites.
-- [x] Parce qu'il aide a comprendre les appels de bibliothèques bas niveau
+- [x] Parce qu'il aide à comprendre les appels de bibliothèques bas niveau
 - [ ] Parce que C est une variante de Java
 :::
 :::
 
 ## Programme minimal
 
-Un programme C contient une fonction `main`. C'est le point d'entree execute au
+Un programme C contient une fonction `main`. C'est le point d'entrée exécuté au
 lancement du programme.
 
 ```c {playback=typing}
@@ -100,14 +100,14 @@ int main(void)
 
 Ce programme :
 
-- inclut des declarations fournies par des fichiers d'en-tête ;
+- inclut des déclarations fournies par des fichiers d'en-tête ;
 - appelle `printf` pour afficher sur la sortie standard ;
 - termine la ligne avec `\n` ;
-- retourne un code de fin d'execution au système.
+- retourne un code de fin d'exécution au système.
 
 La forme `int main(void)` indique que `main` ne reçoit aucun argument et retourne
-un entier. Par convention, ce code de retour indique si le programme s'est termine
-correctement. `EXIT_SUCCESS`, defini dans `stdlib.h`, exprime une terminaison
+un entier. Par convention, ce code de retour indique si le programme s'est terminé
+correctement. `EXIT_SUCCESS`, défini dans `stdlib.h`, exprime une terminaison
 reussie.
 
 ## Syntaxe et fonction de base
@@ -118,7 +118,7 @@ Il y a des différences syntaxiques qu'ils faut quand même connaître.
 
 ### Variables et types simples
 
-Une variable C contient directement une valeur du type annonce. Pour un premier
+Une variable C contient directement une valeur du type annoncé. Pour un premier
 programme, on peut raisonner comme en Java sur les entiers, les conditions et les
 boucles, mais il faut garder en tête que C fait peu de contrôles automatiques.
 
@@ -146,7 +146,7 @@ description: On declare `int note = 12;`.
 - [x] Une valeur entière copiée dans la variable
 - [ ] Une référence vers un objet
   hint: En C, une variable simple contient directement sa valeur.
-- [ ] Une chaine de caractères
+- [ ] Une chaîne de caractères
 :::
 :::
 
@@ -158,7 +158,7 @@ Les conditions ressemblent à Java sur la syntaxe de base.
 if (a > b) {
     printf("a est plus grand\n");
 } else {
-    printf("b est plus grand ou egal\n");
+    printf("b est plus grand ou égal\n");
 }
 ```
 
@@ -220,7 +220,7 @@ return 0;
 ```
 
 ```trap
-La boucle ci-dessus affiche les valeurs de `0` a `4`. Cette convention est importante pour les tableaux : le premier indice est `0`.
+La boucle ci-dessus affiche les valeurs de `0` à `4`. Cette convention est importante pour les tableaux : le premier indice est `0`.
 ```
 
 ### Tranformez cette boucle for en boucle while
@@ -247,7 +247,7 @@ mémoire contenant des éléments consécutifs.
 ```c {playback=typing}
 /** Declaration du tableau
  *
- * Cette declaration reserve trois entiers et initialise leurs valeurs. Les
+ * Cette déclaration réserve trois entiers et initialise leurs valeurs. Les
  * indices valides du tableau sont 0, 1 et 2.
  */
 int notes[] = {12, 14, 9};
@@ -275,8 +275,8 @@ int notes[]; // erreur de compilation ici!
 
 /** Calcul de la somme
  *
- * La boucle parcourt chaque indice valide. A chaque iteration, la valeur de
- * l'element courant est ajoutee a la somme.
+ * La boucle parcourt chaque indice valide. À chaque itération, la valeur de
+ * l'élément courant est ajoutée à la somme.
  */
 int somme = 0;
 int i;
@@ -288,7 +288,7 @@ for (i = 0; i < 3; i++) {
 
 /** Affichage du resultat
  *
- * La valeur calculee est finalement envoyee sur la sortie standard.
+ * La valeur calculée est finalement envoyée sur la sortie standard.
  */
 printf("somme = %d\n", somme);
 /** */
@@ -323,16 +323,16 @@ description: On declare `int notes[3] = {12, 14, 9};`.
 
 ### Fichiers d'en-tête
 
-Un fichier d'en-tête, ou header, contient des declarations nécessaires au compilateur. Il ne contient pas forcement le code complet de la fonction appelée, mais il annonce son existence et sa forme.
+Un fichier d'en-tête, ou header, contient des déclarations nécessaires au compilateur. Il ne contient pas forcément le code complet de la fonction appelée, mais il annonce son existence et sa forme.
 
 Dans l'exemple precedent :
 
-- `#include <stdio.h>` donne accès a la declaration de `printf` ;
-- `#include <stdlib.h>` donne accès a `EXIT_SUCCESS` ;
+- `#include <stdio.h>` donne accès à la déclaration de `printf` ;
+- `#include <stdlib.h>` donne accès à `EXIT_SUCCESS` ;
 - les chevrons `<...>` désignent un header fourni par le système ou la
   bibliothèque standard.
 
-Cette distinction entre declaration et definition deviendra essentielle avec la
+Cette distinction entre déclaration et définition deviendra essentielle avec la
 compilation séparée en phase 2.
 
 ### Entrées-sorties et adresses
@@ -426,13 +426,13 @@ title: Programme minimal
 
 ::: question {#q-s1-main-headers}
 title: Quelles affirmations sont correctes ?
-description: On considere le programme `hello.c` minimal.
+description: On considère le programme `hello.c` minimal.
 
-- [x] `main` est le point d'entree du programme
-- [x] `stdio.h` declare notamment `printf`
-- [ ] `printf` definit le code de retour du programme
+- [x] `main` est le point d'entrée du programme
+- [x] `stdio.h` déclare notamment `printf`
+- [ ] `printf` définit le code de retour du programme
   hint: Le code de retour vient de l'instruction `return` de `main`.
-- [x] `\n` permet d'afficher un retour a la ligne
+- [x] `\n` permet d'afficher un retour à la ligne
 :::
 :::
 
@@ -440,7 +440,7 @@ description: On considere le programme `hello.c` minimal.
 
 ### Compilation
 
-Pendant cette premiere phase, les exercices peuvent être lances dans le
+Pendant cette première phase, les exercices peuvent être lancés dans le
 navigateur. Cela permet de se concentrer d'abord sur le langage : variables, conditions, boucles et affichage.
 
 La commande locale complete sera reprise en phase 2. Retenir seulement l'idée
@@ -471,7 +471,7 @@ Le programme lit les valeurs comme si elles avaient été tapées au clavier.
 On peut aussi démarer simplement le programme et taper avec son clavier les valeurs attendues lorsque `scanf` bloque l'exécution en attente de lecture sur l'entrée standard (`stdin`)
 
 
-### Executer (dans le navigateur)
+### Exécuter (dans le navigateur)
 
 Le système intégré à la page compile et exécute des programmes courts. Il ne remplace pas GCC/Clang, mais il suffit pour manipuler les premières notions sans installer l'outillage pendant la phase 1.
 
@@ -494,21 +494,21 @@ fichiers est l'objectif de la phase 2.
 
 ## Présentation rapide du projet
 
-Le projet capteurs analysera des mesures de temperature fournies par une bibliotheque. 
+Le projet capteurs analysera des mesures de température fournies par une bibliothèque.
 
-Le flux de donnée est récupéré sur le reseau (https) au format JSON, nous avons déjà écrit pour vous la partie du code qui réaliser la récupération et le parsing des données.
+Le flux de donnée est récupéré sur le réseau (https) au format JSON, nous avons déjà écrit pour vous la partie du code qui réalise la récupération et l'analyse des données.
 Il faut reste à faire les tâches suivantes:
 
 - structures
 - les calculs
-- la memoire dynamique
+- la mémoire dynamique
 - les tests 
 - le rapport
 
 ## Pour vous entrainer
 
 ```todo
-Hello personnalise : afficher un message et retourner `EXIT_SUCCESS`.
+Hello personnalisé : afficher un message et retourner `EXIT_SUCCESS`.
 ```
 
 ```todo

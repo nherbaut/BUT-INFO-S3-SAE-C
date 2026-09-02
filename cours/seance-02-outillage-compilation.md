@@ -20,7 +20,7 @@ compilation, en voici quelques-unes.
 gcc \
 ##
 ## Spécification de la norme C
-# de nombreuses spécifications de C existent (K&R C ANSI C C99 C11 C17 C23 C29), même si les nouvelles modifications apportées dans le langage sont bien moins importantes que Java ou Python.
+# De nombreuses spécifications de C existent (K&R C ANSI C C99 C11 C17 C23 C29), même si les nouvelles modifications apportées dans le langage sont bien moins importantes que Java ou Python.
 # Nous utiliserons le C11, équivalent à la norme ISO IEC 9899:2011.
 -std=c11
 ##
@@ -29,7 +29,7 @@ gcc \
 -Wall -Wextra -Wpedantic\
 ##
 ## Le débugger
-# Il est possible de debugger du C dans la ligne de commande avec l'utilitaire gdb, ou directement dans un front-end de gdb fourni par votre IDE. Nous utiliserons le frontend de vscode dans ce cours.
+# Il est possible de déboguer du C dans la ligne de commande avec l'utilitaire gdb, ou directement dans une interface gdb fournie par votre IDE. Nous utiliserons l'interface de VS Code dans ce cours.
 -g
 ##
 ```
@@ -47,7 +47,7 @@ l'édition des liens visibles.
    `gcc -S main.c`.
 3. Le **compilateur** traduit chaque unité de compilation en fichier objet
    (`.o`). Un fichier objet contient du code machine, mais peut encore référer
-   à des fonctions définies dans un autre fichier. L'option `-c` demande à
+  à des fonctions définies dans un autre fichier. L'option `-c` demande au
    `gcc` de s'arrêter à cette étape.
 4. L'**éditeur de liens** ou *linker* réunit les fichiers objets et les
    bibliothèques, résout les références entre fonctions et produit
@@ -107,10 +107,10 @@ pour ne pas entrer en collision avec celui d'un autre header.
 
 
 ::: quiz {#quiz-s2-gcc}
-title: compiler avec gcc
+title: Compiler avec gcc
 
 ::: question {#q-s2-gcc-options}
-title: quelles options sont utiles pour compiler ce cours ?
+title: Quelles options sont utiles pour compiler ce cours ?
 description: Sélectionnez les options qui demandent le C11, des warnings utiles et des informations de débogage.
 
 - [x] `-std=c11`
@@ -123,7 +123,7 @@ description: Sélectionnez les options qui demandent le C11, des warnings utiles
 
 ## Piloter la construction et les tests du projet avec un Makefile
 
-La compilation est une étape primordiale de tout projet, ainsi, elle est le plus souvent automatisée. De nombreux outils d'automatisation existent, le plus utilisé est Makefile. 
+La compilation est une étape primordiale de tout projet ; elle est le plus souvent automatisée. De nombreux outils d'automatisation existent, le plus utilisé est Makefile.
 
 Il peut être écrit à la main, ou généré automatiquement à partir d'utilitaires de plus haut niveau. L'industrie utilise beaucoup CMake, qui permet de générer les Makefiles ainsi que l'intégration aux IDE les plus connus.
 
@@ -137,7 +137,7 @@ $ cat Makefile
 # La variable CFLAGS regroupe les options passées au compilateur : la norme C11,
 # les warnings utiles et les informations de débogage pour gdb ou VS Code.
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g
-# Les options propres a l'édition de liens et les bibliothèques sont séparées.
+# Les options propres à l'édition de liens et les bibliothèques sont séparées.
 LDFLAGS =
 LDLIBS =
 ##
@@ -160,7 +160,7 @@ pouvez la remplacer ponctuellement, par exemple avec `make CC=clang`. `CFLAGS`
 contient les options de compilation des sources, `LDFLAGS` les options de
 l'éditeur de liens, et `LDLIBS` les bibliothèques telles que `-lm` ou `-lcurl`.
 
-## Executer un programme
+## Exécuter un programme
 
 Vous pouvez également exécuter le programme directement depuis le terminal
 
@@ -244,28 +244,28 @@ compilation-separee/
 - `include/projet/` est prêt-à-recevoir les fichiers d'en-tête publics.
 - `tests/` contient le résultat attendu par `make test`.
 - `build/` contient les fichiers objets et l'exécutable produits par la
-  compilation. Il est généré par `make` et ne doit pas être modifie a la main.
-- Le `Makefile` décris les dépendances entre ces fichiers et fournit les cibles
+  compilation. Il est généré par `make` et ne doit pas être modifié à la main.
+- Le `Makefile` décrit les dépendances entre ces fichiers et fournit les cibles
   `make`, `make run`, `make test`, `make memcheck` et `make clean`.
 
-L'objectif est de transformer ce programme en compilation séparée : creer
+L'objectif est de transformer ce programme en compilation séparée : créer
 `include/projet/stats.h`, déplacer `moyenne` et `maximum` dans `src/stats.c`,
 inclure le header dans `src/main.c`, puis modifier le `Makefile`. La version
-finale produira d'abord `build/main.o` et `build/stats.o`, puis l'edition de
+finale produira d'abord `build/main.o` et `build/stats.o`, puis l'édition de
 liens les assemblera dans l'exécutable `build/stats`.
 
 ::: quiz {#quiz-s2-layout}
 title: Organisation d'un projet C
 
 ::: question {#q-s2-layout-directories}
-title: Quels répertoires appartiennent a cette organisation ?
+title: Quels répertoires appartiennent à cette organisation ?
 description: Sélectionnez les associations correctes entre un répertoire et son rôle.
 
 - [x] `src/` contient les fichiers source C.
 - [x] `include/` contient les fichiers d'en-tête.
 - [x] `tests/` contient les programmes ou jeux de tests.
 - [ ] `build/` est le répertoire dans lequel on écrit les fichiers source à la main.
-  hint: `build/` est produit par la compilation et peut être supprime avec `make clean`.
+  hint: `build/` est produit par la compilation et peut être supprimé avec `make clean`.
 :::
 :::
 
@@ -275,7 +275,7 @@ description: Sélectionnez les associations correctes entre un répertoire et so
 
 La fonction `main` peut recevoir le nombre d'arguments dans `argc` et leurs valeurs dans
 `argv`. A cette phase, on utilise `argc` pour vérifier la forme de la commande;
-la manipulation détaillée des chaines contenues dans `argv` sera vue en phase 3.
+la manipulation détaillée des chaînes contenues dans `argv` sera vue en phase 3.
 
 ```c
 #include <stdio.h>
@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
 {
     int i;
 
-    printf("nombre d'arguments: %d\n", argc);
+    printf("nombre d'arguments : %d\n", argc);
     for (i = 0; i < argc; i++) {
         printf("argv[%d] = %s\n", i, argv[i]);
     }
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 ```
 
 ```todo
-Ajouter des Paramètres d'exécution à passer à stdin et vérifiez le programme les compte bien.
+Ajoutez des paramètres d'exécution à passer à `stdin` et vérifiez que le programme les compte bien.
 ```
 
 Les options `--file` et `--url` du projet capteurs sont un exemple de cette
@@ -307,9 +307,9 @@ title: Que reçoit le programme appelé avec `./capteurs --file mesures.json` ?
 description: Sélectionnez les affirmations correctes sur `argc` et `argv`.
 
 - [x] `argc` vaut `3`.
-- [x] `argv[0]` contient le nom utilise pour lancer le programme.
+- [x] `argv[0]` contient le nom utilisé pour lancer le programme.
 - [x] `argv[1]` contient `--file`.
-- [ ] `argv` contient les valeurs saisies sur l'entree standard.
+- [ ] `argv` contient les valeurs saisies sur l'entrée standard.
   hint: Les arguments sont donnés dans la commande ; stdin est un flux distinct.
 :::
 :::
@@ -323,7 +323,7 @@ incorrect ou indéfini.
 
 Dans cet exercice local, le `Makefile` transforme les warnings demandes en
 erreurs de compilation. Corrigez les neuf diagnostics dans `src/main.c`, puis
-verifiez le resultat avec `make test`.
+vérifiez le résultat avec `make test`.
 
 {{ c_exercise: exercices/seance-02/corriger-diagnostics }}
 

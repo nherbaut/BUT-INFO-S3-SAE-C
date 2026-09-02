@@ -1,0 +1,18 @@
+{
+  "files.exclude": {
+    "build": true,
+    "provided": true
+  },
+  "makefile.launchConfigurations": [
+    {
+      "cwd": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/projet/capteurs-starter/build",
+      "binaryPath": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/projet/capteurs-starter/build/test_series",
+      "binaryArgs": []
+    },
+    {
+      "cwd": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/projet/capteurs-starter/build",
+      "binaryPath": "/home/nherbaut/Documents/teaching/IUTBDX/SAE-C/projet/capteurs-starter/build/capteurs",
+      "binaryArgs": []
+    }
+  ]
+}
