@@ -17,6 +17,7 @@ SCENARIO_ARGS ?=
 
 BUILD_DIR := build
 PROGRAM := $(BUILD_DIR)/capteurs
+PROJECT_PDF := $(BUILD_DIR)/projet-capteurs.pdf
 TEST_STATISTICS := $(BUILD_DIR)/test_statistics
 TEST_SERIES := $(BUILD_DIR)/test_series
 TEST_SOURCE := $(BUILD_DIR)/test_source
@@ -27,7 +28,7 @@ LIB_OBJS := \
 	$(BUILD_DIR)/report.o \
 	$(BUILD_DIR)/cJSON.o
 
-.PHONY: all run test test-statistics test-series test-source memcheck memcheck-tests memcheck-run memcheck-scenario clean student-tarball
+.PHONY: all run test test-statistics test-series test-source memcheck memcheck-tests memcheck-run memcheck-scenario check-tools cppcheck pdf clean student-tarball
 
 all: $(PROGRAM)
 
@@ -100,6 +101,21 @@ memcheck-run: $(PROGRAM)
 
 memcheck-scenario: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(SCENARIO_ARGS)
+
+check-tools:
+	@command -v $(CC) >/dev/null || { echo "Compilateur C introuvable: $(CC)"; exit 1; }
+	@command -v $(MAKE) >/dev/null || { echo "Make introuvable"; exit 1; }
+	@command -v pkg-config >/dev/null || { echo "pkg-config introuvable"; exit 1; }
+	@pkg-config --exists libcurl || { echo "Bibliothèque libcurl introuvable"; exit 1; }
+	@command -v cppcheck >/dev/null || { echo "cppcheck introuvable"; exit 1; }
+	@command -v $(VALGRIND) >/dev/null || { echo "Valgrind introuvable"; exit 1; }
+	@echo "Environnement de développement prêt."
+
+cppcheck:
+	cppcheck --enable=warning,style,performance,portability --std=c11 --error-exitcode=1 --suppress=missingIncludeSystem -Iinclude src
+
+pdf: README.md | $(BUILD_DIR)
+	pandoc --standalone --metadata title="Projet capteurs SAE-C" README.md -o $(PROJECT_PDF)
 
 student-tarball:
 	python3 ../../tools/export_capteurs_starter.py

@@ -10,7 +10,9 @@
 
 ## Compiler avec `gcc`
 
-gcc (ou son alias cc sur vos machine) peut être utiliser pour compiler directement un fichier source. De nombreuses options sont utiles lors de la compilation, en voici quelques unes.
+`gcc` (ou son alias `cc` sur vos machines) peut être utilisé pour compiler
+directement un fichier source. De nombreuses options sont utiles lors de la
+compilation, en voici quelques-unes.
 
 ```bash {playback=typing}
 ## Appel de gcc (GNU Compiler Collection)
@@ -24,12 +26,82 @@ gcc \
 ##
 ## Les Warnings
 # Il est très utile d'afficher les avertissements de compilation, car le plus souvent, ils correspondent à des problèmes de programmation. Nous utiliserons les flags suivants:
--Wall -Wextra -pedantic\
+-Wall -Wextra -Wpedantic\
 ##
 ## Le débugger
 # Il est possible de debugger du C dans la ligne de commande avec l'utilitaire gdb, ou directement dans un front-end de gdb fourni par votre IDE. Nous utiliserons le frontend de vscode dans ce cours.
 -g
 ##
+```
+
+```technical
+La construction d'un programme C se déroule en plusieurs phases. Java compile
+aussi ses sources, mais la construction C rend ces étapes intermédiaires et
+l'édition des liens visibles.
+
+1. Le **préprocesseur** traite les directives telles que `#include`, `#define`
+   et les conditions de compilation. Il remplace notamment chaque inclusion de
+   header par son contenu et produit une unité de compilation. `gcc -E main.c`
+   permet d'observer ce résultat.
+2. Le compilateur peut ensuite produire du **code assembleur** avec
+   `gcc -S main.c`.
+3. Le **compilateur** traduit chaque unité de compilation en fichier objet
+   (`.o`). Un fichier objet contient du code machine, mais peut encore référer
+   à des fonctions définies dans un autre fichier. L'option `-c` demande à
+   `gcc` de s'arrêter à cette étape.
+4. L'**éditeur de liens** ou *linker* réunit les fichiers objets et les
+   bibliothèques, résout les références entre fonctions et produit
+   l'exécutable final.
+
+Sans l'option `-c`, un appel comme `gcc main.c -o programme` enchaîne ces
+phases pour un programme monofichier. Avec plusieurs fichiers C, le Makefile
+compile d'abord chaque source en `.o`, puis lance une seule édition de liens.
+```
+
+::: quiz {#quiz-s2-phases-compilation}
+title: Phases de construction d'un programme C
+
+::: question {#q-s2-phases-compilation}
+title: Quelles affirmations décrivent correctement la construction C ?
+description: Sélectionnez toutes les affirmations correctes.
+
+- [x] Le préprocesseur traite notamment les directives `#include` et `#define`.
+- [x] `gcc -S main.c` produit du code assembleur.
+- [x] `gcc -c main.c -o main.o` produit un fichier objet sans créer l'exécutable final.
+- [x] L'éditeur de liens réunit les fichiers objets et les bibliothèques pour produire un exécutable.
+- [ ] L'édition des liens ajoute automatiquement le contenu de tous les fichiers `.c` du répertoire.
+  hint: Seuls les fichiers objets et bibliothèques indiqués à la commande de liaison participent à l'exécutable.
+:::
+:::
+
+## Fichier d'en-tête
+
+Avant d'automatiser la construction, il faut distinguer l'interface d'un module
+de son implémentation. Un fichier d'en-tête, généralement nommé avec l'extension
+`.h`, décrit ce que les autres fichiers C peuvent utiliser : déclarations de
+fonctions, types, constantes et éventuellement macros. Les corps des fonctions
+restent dans les fichiers `.c`.
+
+Un header peut être inclus par plusieurs fichiers. Une garde d'inclusion évite
+que ses déclarations soient lues deux fois dans une même unité de compilation :
+
+```c
+#ifndef PROJET_STATS_H
+#define PROJET_STATS_H
+
+#include <stddef.h>
+
+double moyenne(const int values[], size_t count);
+int maximum(const int values[], size_t count);
+
+#endif
+```
+
+```technical
+Lors de la première inclusion, le préprocesseur définit `PROJET_STATS_H` et
+conserve le contenu du header. Lors d'une inclusion suivante, `#ifndef` est
+faux : le contenu est ignoré. Le nom de la garde doit être suffisamment précis
+pour ne pas entrer en collision avec celui d'un autre header.
 ```
 
 
@@ -65,12 +137,15 @@ $ cat Makefile
 # La variable CFLAGS regroupe les options passées au compilateur : la norme C11,
 # les warnings utiles et les informations de débogage pour gdb ou VS Code.
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g
+# Les options propres a l'édition de liens et les bibliothèques sont séparées.
+LDFLAGS =
+LDLIBS =
 ##
 ## Cible finale
 # La partie à gauche des deux-points est une cible. Pour produire le programme,
 # make doit d'abord produire main.o, placé après les deux-points.
 programme: main.o
-	$(CC) $(CFLAGS) main.o -o programme
+	$(CC) $(LDFLAGS) main.o $(LDLIBS) -o programme
 ##
 ## Cible intermédiaire
 # main.o dépend de main.c. La ligne indentée par une tabulation est la recette
@@ -79,6 +154,11 @@ main.o: main.c
 	$(CC) $(CFLAGS) -c main.c -o main.o
 ##
 ```
+
+`CC` est une variable prédéfinie par Make : elle vaut généralement `cc`. Vous
+pouvez la remplacer ponctuellement, par exemple avec `make CC=clang`. `CFLAGS`
+contient les options de compilation des sources, `LDFLAGS` les options de
+l'éditeur de liens, et `LDLIBS` les bibliothèques telles que `-lm` ou `-lcurl`.
 
 ## Executer un programme
 
@@ -275,45 +355,6 @@ description: Le dépôt doit permettre de compiler, exécuter et tester localeme
 :::
 :::
 
-## Fichier d'en-tête
-
-Un fichier d'en-tête, généralement nommé avec l'extension `.h`, décrit
-l'**interface** d'un module : ce que les autres fichiers C peuvent utiliser
-sans avoir à connaître son implémentation. Il contient notamment des
-déclarations de fonctions, des types, des constantes et éventuellement des
-macros.
-
-Dans cet exercice, `include/projet/stats.h` déclarera les fonctions `moyenne`
-et `maximum`. Le fichier `src/main.c` et le futur fichier `src/stats.c`
-l'incluront avec `#include "projet/stats.h"`. Les corps des fonctions restent
-dans le fichier `.c` : le header expose le contrat, le source fournit le code.
-
-Voici l'interface attendue :
-
-```c
-#ifndef PROJET_STATS_H
-#define PROJET_STATS_H
-
-#include <stddef.h>
-
-double moyenne(const int values[], size_t count);
-int maximum(const int values[], size_t count);
-
-#endif
-```
-
-```technical
-Une garde d'inclusion protège un header contre les inclusions multiples. Lors
-de la première inclusion, le préprocesseur conserve le contenu du fichier et
-marque la garde comme définie. Lors d'une inclusion suivante, il ignore le même
-contenu : les déclarations ne sont donc pas lues deux fois dans la même unité de
-compilation.
-
-Le nom de la garde doit être suffisamment précis pour éviter une collision avec
-un autre header. `PROJET_STATS_H` reflète ici le rôle et le chemin du fichier
-`projet/stats.h`.
-```
-
 ## Exercice de la compilation séparée
 
 Transformez le projet monolithique proposé ci-dessous en projet à compilation
@@ -339,8 +380,7 @@ séparée. Travaillez localement et vérifiez après chaque étape avec `make te
    `src/stats.c`, avec `-c`. La cible `build/stats` doit ensuite lier ces deux
    fichiers objets. Ajoutez aussi `include/projet/stats.h` aux dépendances des
    deux fichiers objets.
-5. **Ecrivez des tests unitaires**. Un fichier  `test/stats_test.c` doit être ajouté au projet. Dans celui-ci, vous écrirez un test unitaire pour vérifier le calcul de la moyenne. Pour cela, appellerez [la fonction assert](https://man7.org/linux/man-pages/man3/assert.3.html) dans une fonction main() de ce fichier.
-6. **Valider le résultat.** `make`, `make run`, `make test` et `make memcheck`
+5. **Valider le résultat.** `make`, `make run`, `make test` et `make memcheck`
    doivent toujours fonctionner. `make clean` doit supprimer `build/`.
 
 

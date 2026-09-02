@@ -26,13 +26,16 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential make pandoc texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+          sudo apt-get install -y build-essential make cppcheck pandoc texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Test C exercises
         run: make test
+
+      - name: Analyze student C code
+        run: make cppcheck
 
       - name: Build static supports
         run: make supports

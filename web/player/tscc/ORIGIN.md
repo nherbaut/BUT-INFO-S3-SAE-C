@@ -12,4 +12,7 @@ Limites assumees pour les supports:
 - ce n'est pas GCC/Clang;
 - pas de compilation multi-fichiers dans le navigateur;
 - `scanf(...)` simple est transforme en affectations depuis le champ `stdin`;
+- les arguments `argc` et `argv` sont adaptés par `c-runtime-adapter.js` pour
+  les signatures usuelles de `main`; cette adaptation est propre au support et
+  ne remplace pas l'exécution locale;
 - les Makefiles locaux restent la reference pour le C complet.

@@ -37,6 +37,9 @@ FULL_PDF = "assets/pdf/but-info-s3-sae-c.pdf"
 FULL_ZIP = "assets/zip/but-info-s3-sae-c-starters.zip"
 QUIZ_INDEX = "quiz.html"
 QUIZ_PDF = "assets/pdf/but-info-s3-sae-c-quiz.pdf"
+PROJECT_PDF = "assets/pdf/projet-capteurs.pdf"
+SENSORS_PROJECT = ROOT / "projet" / "capteurs-starter"
+SENSORS_PROJECT_PDF = SENSORS_PROJECT / "build" / "projet-capteurs.pdf"
 MILESTONES_PAGE = "jalons.html"
 MILESTONES_PATH = COURSES / "jalons.md"
 ADMIN_PAGE = "admin.html"
@@ -650,7 +653,19 @@ def render_html_admonition(kind, source, document_id, occurrence):
 
 
 def render_pdf_admonition(kind, source):
-    latex_body = source.strip().replace("_", r"\_")
+    latex_escapes = {
+        "#": r"\#",
+        "$": r"\$",
+        "%": r"\%",
+        "&": r"\&",
+        "_": r"\_",
+        "{": r"\{",
+        "}": r"\}",
+        "~": r"\textasciitilde{}",
+        "^": r"\textasciicircum{}",
+        "\\": r"\textbackslash{}",
+    }
+    latex_body = "".join(latex_escapes.get(character, character) for character in source.strip())
     return f"\\begin{{saecadmonition}}{{{kind}}}\n\n{latex_body}\n\n\\end{{saecadmonition}}"
 
 
@@ -876,6 +891,7 @@ def main_nav(active, include_admin=False):
         ("index.html", "Accueil", active == "home"),
         (COURSE_INDEX, "Cours", active == "course"),
         ("exercices.html", "Exercices", active == "exercises"),
+        (PROJECT_PDF, "Projet", False),
         (QUIZ_INDEX, "Quiz", active == "quiz"),
         (FULL_PDF, "PDF", False),
         (PUBLIC_REPO, "Depot", False),
@@ -972,7 +988,7 @@ def doc_layout(body, courses, current, active, pdf_href=None, zip_href=None):
     return f"""
 {main_nav(active)}
 <div class="container-fluid">
-  <div class="row">
+  <div class="row course-layout">
     {left_sidebar(courses, current)}
     <main class="course-content col-lg-8 py-4">
       {action_block}
@@ -2225,12 +2241,18 @@ def build_full_pdf(courses):
     run_pandoc("\n".join(blocks), BUILD / FULL_PDF, html_mode=False)
 
 
+def build_project_pdf():
+    subprocess.run(["make", "-C", str(SENSORS_PROJECT), "pdf"], check=True)
+    shutil.copy2(SENSORS_PROJECT_PDF, BUILD / PROJECT_PDF)
+
+
 def main():
     BUILD.mkdir(parents=True, exist_ok=True)
     PDF_DST.mkdir(parents=True, exist_ok=True)
     ZIP_DST.mkdir(parents=True, exist_ok=True)
     copy_course_assets()
     write_pdf_footer()
+    build_project_pdf()
     if PLAYER_DST.exists():
         shutil.rmtree(PLAYER_DST)
     shutil.copytree(PLAYER_SRC, PLAYER_DST)

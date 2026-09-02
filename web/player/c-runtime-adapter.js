@@ -16,8 +16,10 @@
   function injectArguments(source, argvText) {
     const argumentsList = String(argvText || "").split(/\r?\n/).filter((argument) => argument.length > 0);
     const values = ["programme", ...argumentsList].map(quoteCString).join(", ");
+    // The browser runtime only supports main(void). Accept usual C spellings
+    // for argv before lowering them to local variables.
     return source.replace(
-      /int\s+main\s*\(\s*int\s+([A-Za-z_][A-Za-z0-9_]*)\s*,\s*char\s*\*\s*(?:\*\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[\s*\])?\s*\)\s*\{/,
+      /\bint\s+main\s*\(\s*int\s+([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(?:const\s+)?char\s*\*\s*(?:\*\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[\s*(?:[A-Za-z_][A-Za-z0-9_]*|\d+)?\s*\])?\s*\)\s*\{/,
       (_match, argc, argv) => `int main(void) {\n    int ${argc} = ${argumentsList.length + 1};\n    char *${argv}[] = {${values}};`,
     );
   }

@@ -42,6 +42,18 @@ reference pour ces points.
 Pendant environ 45 minutes, les etudiants stabilisent leur version candidate,
 completent les tests utiles et verifient la memoire avec Valgrind.
 
+## Travail personnel et traçabilité
+
+Le code rendu doit être écrit sans recours à une IA générative. Le dépôt doit
+montrer une progression régulière, avec des commits personnels décrivant les
+étapes significatives du travail. Les étudiants peuvent consulter la
+documentation, les supports, les manuels et les exemples fournis ; en cas de
+doute sur une ressource, ils la signalent à l'enseignant.
+
+L'historique Git sert à suivre la progression, mais ne constitue pas à lui seul
+une preuve d'auteur. L'évaluation individuelle sur machine repose sur le code
+apporté par l'étudiant et sur sa capacité à le lire, l'expliquer et le modifier.
+
 ## Evaluation individuelle
 
 Les 30 dernieres minutes sont consacrees a une modification individuelle du
@@ -55,3 +67,4 @@ et passer `make test` et `make memcheck`.
 - aucune modification dans `provided/`;
 - Makefile fonctionnel;
 - tests verts et absence de fuite signalee par Valgrind.
+- historique Git avec commits personnels et réguliers.

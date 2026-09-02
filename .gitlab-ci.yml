@@ -9,6 +9,7 @@ default:
     - >-
       DEBIAN_FRONTEND=noninteractive apt-get install --yes
       build-essential
+      cppcheck
       make
       pandoc
       python3
@@ -21,6 +22,7 @@ test-c:
   stage: test
   script:
     - make test
+    - make cppcheck
 
 deploy-pages:
   stage: deploy

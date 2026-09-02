@@ -4,16 +4,23 @@ Les jalons structurent le travail personnel à réaliser entre les phases encadr
 
 ## Jalon autonome 1 - Comprendre le projet
 
-Sans modifier le projet, clonez le dép^t, ouvrez le projet dans VS Code et lancez `make`, `make test` et `make capteurs`. 
-Lisez ensuite le README du projet capteurs, consultez les attendus pour le rapport et proposez des cas de test pour minimum, maximum, moyenne et écart interieur-exterieur. 
+Sans modifier le projet, clonez le dépôt, ouvrez le projet dans VS Code et
+vérifiez l'environnement avec `make check-tools`, `make`, `make test` et
+`make cppcheck`.
+
+Lisez ensuite le README du projet capteurs, consultez les attendus pour le
+rapport et proposez des cas de test pour minimum, maximum, moyenne et écart
+intérieur-extérieur.
+
+Le [sujet du projet capteurs est également disponible au format PDF](assets/pdf/projet-capteurs.pdf).
 
 Notez les questions et difficultés que vous avez eux, nous les aborderons pendant la phase 2.
 
 ### Prise en main locale
 
-La prise en main locale est realisee pendant ce jalon. Verifiez les choix de
-tests proposes et notez les erreurs rencontrees pendant le clonage, la
-compilation et l'execution.
+La prise en main locale est réalisée pendant ce jalon. Vérifiez les choix de
+tests proposés et notez les erreurs rencontrées pendant le clonage, la
+compilation, l'exécution ou l'analyse statique.
 
 ### Cloner le depot
 
@@ -100,6 +107,23 @@ build/main.o build/series.o build/statistics.o build/sensor_source.o build/repor
 -o build/capteurs
 ##
 ```
+
+### Vérifier les outils
+
+```todo
+Depuis `projet/capteurs-starter`, exécutez `make check-tools`, puis `make cppcheck`.
+```
+
+`check-tools` vérifie que le compilateur, Make, `pkg-config`, `libcurl` et
+`cppcheck` sont disponibles. `cppcheck` analyse uniquement `src/`, c'est-à-dire
+le code à modifier ; il n'analyse ni le réseau ni le parseur JSON fournis.
+
+### Première préparation des statistiques
+
+Avant d'écrire les statistiques du projet, proposez sur papier les signatures
+de deux fonctions sur un tableau de mesures : une fonction de minimum et une
+fonction de maximum. Précisez les paramètres nécessaires et le comportement
+attendu lorsque le tableau est vide. Ces choix seront discutés avant le jalon 2.
 
 ### Ouvrir le projet avec VS Code
 

@@ -18,7 +18,7 @@ BUILD_DIR := build/supports
 PORT ?= 8000
 C_REPL_IMAGE ?= c-repl
 
-.PHONY: all run test memcheck clean supports serve serve-static c check-runtime capteurs capteurs-student-tarball $(EXERCISES) $(PROJECT)
+.PHONY: all run test memcheck clean supports serve serve-static c check-runtime capteurs capteurs-student-tarball check-tools cppcheck $(EXERCISES) $(PROJECT)
 
 all: $(EXERCISES) $(PROJECT)
 
@@ -58,6 +58,12 @@ capteurs:
 
 capteurs-student-tarball:
 	$(MAKE) -C $(SENSORS_PROJECT) student-tarball
+
+check-tools:
+	$(MAKE) -C $(SENSORS_PROJECT) check-tools
+
+cppcheck:
+	$(MAKE) -C $(SENSORS_PROJECT) cppcheck
 
 clean:
 	set -e; for dir in $(EXERCISES) $(PROJECT); do $(MAKE) -C $$dir clean; done
