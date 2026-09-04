@@ -227,7 +227,7 @@ dont un pour `\0`, et son contenu peut être changé.
 
 On ne copie pas une chaîne avec `=` après sa déclaration : cette opération
 copierait seulement une adresse. `<string.h>` fournit notamment `strlen`,
-`strcmp`, `strcpy` et `strcat`.
+`strcmp`, `strcpy`, `strcat` et `strdup`.
 
 | Fonction | Rôle | Précaution |
 | --- | --- | --- |
@@ -235,6 +235,29 @@ copierait seulement une adresse. `<string.h>` fournit notamment `strlen`,
 | `strcmp(a, b)` | Compare deux chaînes | Retourne `0` si elles sont égales. |
 | `strcpy(dest, src)` | Copie `src` dans `dest` | `dest` doit être assez grand. |
 | `strcat(dest, src)` | Ajoute `src` à la fin de `dest` | `dest` doit avoir assez de place. |
+| `strdup(src)` | Alloue puis retourne une copie de `src` | Vérifier le retour, puis appeler `free`. |
+
+`strcpy` et `strdup` copient le même contenu, y compris le `\0` final, mais
+ne gèrent pas la mémoire de la même façon. Avec `strcpy`, la destination existe
+déjà : c'est au programme de réserver un buffer assez grand. Avec `strdup`, la
+fonction réserve exactement la place nécessaire dans le tas et retourne son
+adresse ; la copie doit donc être libérée avec `free`.
+
+```c
+char buffer[32];
+char *copie;
+
+strcpy(buffer, "Ada");        // buffer a déjà été réservé
+copie = strdup("Ada");        // copie est NULL en cas d'échec
+if (copie != NULL) {
+    /* utiliser copie */
+    free(copie);
+}
+```
+
+`strdup` est une fonction POSIX courante, mais pas une fonction du standard C
+ISO. Dans un environnement où elle n'est pas disponible, on peut écrire son
+équivalent avec `malloc`, `strlen` et `memcpy` ci-dessous.
 
 Pour un buffer de taille connue, `snprintf` est souvent plus sûr : il limite le
 nombre d'octets écrits et termine la chaîne quand la taille est non nulle.
@@ -258,6 +281,7 @@ description: On manipule des chaînes C correctement terminées par `\0`.
 - [x] `strcat(dest, src)` conserve le contenu initial de `dest` puis ajoute `src`.
 - [ ] `strcpy` alloue automatiquement la mémoire nécessaire à `dest`.
   hint: La destination doit être réservée avant l'appel.
+- [x] Le résultat non nul de `strdup(source)` doit être libéré avec `free`.
 - [ ] `strlen` compte l'octet nul final.
   hint: La longueur est le nombre d'octets avant `\0`.
 :::

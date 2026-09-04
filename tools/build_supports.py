@@ -62,12 +62,13 @@ DIV_END = re.compile(r"^:::\s*$")
 OPTION_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+(.+?)\s*$")
 FIELD_RE = re.compile(r"^([A-Za-z_-]+):\s*(.*)$")
 BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.S)
-HEAD_RE = re.compile(r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>", re.S)
 NAVIGATION_RE = re.compile(
-    r"<h([12]) id=\"([^\"]+)\">(.*?)</h\1>"
-    r'|<details id="([^"]+)" class="embedded-exercise[^\"]*" data-nav-kind="exercise" data-nav-title="([^"]*)">'
-    r'|<quiz-player id="([^"]+)" data-quiz-b64="[^"]*" data-nav-kind="quiz" data-nav-title="([^"]*)"',
-    re.S,
+    r'<h(?P<heading_level>[12]) id="(?P<heading_id>[^"]+)">(?P<heading_content>.*?)</h[12]>'
+    r'|<(?P<nav_tag>[a-z][a-z0-9-]*)\b'
+    r'(?=[^>]*\bid="(?P<nav_id>[^"]+)")'
+    r'(?=[^>]*\bdata-nav-kind="(?P<nav_kind>[^"]+)")'
+    r'(?=[^>]*\bdata-nav-title="(?P<nav_title>[^"]*)")[^>]*>',
+    re.I | re.S,
 )
 TAG_RE = re.compile(r"<[^>]+>")
 TITLE_BLOCK_RE = re.compile(r"<header id=\"title-block-header\">.*?</header>", re.S)
@@ -86,26 +87,32 @@ ADMONITIONS = {
     "todo": {
         "message": "admonition.todo",
         "icon": "&#9745;",
+        "title": "Action à réaliser",
     },
     "trap": {
         "message": "admonition.trap",
         "icon": "&#9888;",
+        "title": "Piège",
     },
     "warning": {
         "message": "admonition.warning",
         "icon": "&#9888;",
+        "title": "Attention",
     },
     "remember": {
         "message": "admonition.remember",
         "icon": "&#128273;",
+        "title": "À retenir",
     },
     "tip": {
         "message": "admonition.tip",
         "icon": "&#128161;",
+        "title": "Conseil",
     },
     "technical": {
         "message": "admonition.technical",
         "icon": "&#9881;",
+        "title": "Point technique",
     },
 }
 
@@ -388,33 +395,21 @@ def live_question_bank(courses):
 
 
 def admin_flow_items(course, source, raw_body):
-    generated_headings = page_headings(raw_body)
-    heading_index = 0
     items = []
-    lines = source.splitlines()
-    index = 0
-    while index < len(lines):
-        heading_match = re.match(r"^(#{1,2})\s+(.+)$", lines[index])
-        if heading_match:
-            level = len(heading_match.group(1))
-            while heading_index < len(generated_headings) and generated_headings[heading_index]["level"] != level:
-                heading_index += 1
-            if heading_index < len(generated_headings):
-                heading = generated_headings[heading_index]
-                if heading["id"] != "ntfy-chat-group-title":
-                    items.append(
-                        {
-                            "type": "section",
-                            "course_title": course["title"],
-                            "href": f'{course["html"]}#{heading["id"]}',
-                            "level": heading["level"],
-                            "title": heading["title"],
-                        }
-                    )
-                heading_index += 1
-        elif QUIZ_START.match(lines[index]):
-            block, index = collect_div_block(lines, index)
-            quiz = parse_quiz(block, f"{course['stem']}-flow-quiz-{len(items) + 1}")
+    quizzes = iter(quizzes_from_source(source, course))
+    for navigation_item in page_navigation_items(raw_body):
+        if navigation_item["type"] == "course":
+            items.append(
+                {
+                    "type": "section",
+                    "course_title": course["title"],
+                    "href": f'{course["html"]}#{navigation_item["id"]}',
+                    "level": navigation_item["level"],
+                    "title": navigation_item["title"],
+                }
+            )
+        elif navigation_item["type"] == "quiz":
+            quiz = next(quizzes)
             for question in quiz["questions"]:
                 items.append(
                     {
@@ -426,8 +421,17 @@ def admin_flow_items(course, source, raw_body):
                         "question": question,
                     }
                 )
-            continue
-        index += 1
+        else:
+            items.append(
+                {
+                    "type": "content",
+                    "content_kind": navigation_item["type"],
+                    "course_title": course["title"],
+                    "href": f'{course["html"]}#{navigation_item["id"]}',
+                    "level": navigation_item["level"],
+                    "title": navigation_item["title"],
+                }
+            )
     return items
 
 
@@ -489,7 +493,7 @@ def uses_arguments(source):
     return bool(C_ARGS_RE.search(source))
 
 
-def render_html_code_example(source, index):
+def render_html_code_example(source, index, anchor_index):
     payload = encode_data(
         {
             "id": f"code-example-{index}",
@@ -508,10 +512,15 @@ def render_html_code_example(source, index):
             "uses_args": uses_arguments(source),
         }
     )
-    return f'<c-player data-content-kind="example" data-readonly="false" data-exercise-b64="{payload}"></c-player>'
+    title = f"Exemple C {index}"
+    return (
+        f'<c-player id="code-block-{anchor_index}" data-nav-kind="code" '
+        f'data-nav-title="{title}" data-content-kind="example" data-readonly="false" '
+        f'data-exercise-b64="{payload}"></c-player>'
+    )
 
 
-def render_html_typing_lesson(source, index, language):
+def render_html_typing_lesson(source, index, language, anchor_index):
     lesson_hash = hashlib.sha256(f"{language}\0{source}".encode("utf-8")).hexdigest()[:12]
     lesson_id = f"typing-lesson-{lesson_hash}"
     payload = encode_data(
@@ -522,7 +531,22 @@ def render_html_typing_lesson(source, index, language):
             "source": source,
         }
     )
-    return f'<c-typing-player data-content-kind="guided-reading" data-lesson-b64="{payload}"></c-typing-player>'
+    title = f"Lecture guidée {language.upper()} {index}"
+    return (
+        f'<c-typing-player id="code-block-{anchor_index}" data-nav-kind="guided-reading" '
+        f'data-nav-title="{title}" data-content-kind="guided-reading" '
+        f'data-lesson-b64="{payload}"></c-typing-player>'
+    )
+
+
+def render_html_code_block(language, code_lines, anchor_index):
+    title = f"Bloc de code {language.upper()} {anchor_index}"
+    source = "\n".join(code_lines)
+    return f'''::: {{#code-block-{anchor_index} .course-code-block data-nav-kind="code" data-nav-title="{title}"}}
+```{language}
+{source}
+```
+:::'''
 
 
 def render_html_quiz(quiz, fold_validated=False):
@@ -633,8 +657,10 @@ def render_html_admonition(kind, source, document_id, occurrence):
     body = textwrap.dedent(source).strip()
     icon = metadata["icon"]
     label = metadata["message"]
+    title = metadata["title"]
+    anchor_id = f"admonition-{occurrence}"
     if kind != "todo":
-        return f'''::: {{.course-admonition .course-admonition--{kind} role="note"}}
+        return f'''::: {{#{anchor_id} .course-admonition .course-admonition--{kind} data-nav-kind="admonition" data-nav-title="{title}" role="note"}}
 <div class="course-admonition__header"><span class="course-admonition__icon" aria-hidden="true">{icon}</span><strong data-message="{label}"></strong></div>
 
 ::: {{.course-admonition__body}}
@@ -644,7 +670,7 @@ def render_html_admonition(kind, source, document_id, occurrence):
 
     stable_key = f"{document_id}\0{occurrence}\0{source}"
     todo_id = hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:16]
-    return f'''::: {{.course-admonition .course-admonition--todo data-todo-id="{todo_id}" role="note"}}
+    return f'''::: {{#{anchor_id} .course-admonition .course-admonition--todo data-nav-kind="admonition" data-nav-title="{title}" data-todo-id="{todo_id}" role="note"}}
 <div class="course-admonition__header"><span class="course-admonition__icon" aria-hidden="true">{icon}</span><strong data-message="{label}"></strong></div>
 
 ::: {{.course-admonition__body .course-admonition__body--todo data-todo-complete="" data-message-aria-label="todo.complete" role="button" tabindex="0"}}
@@ -677,6 +703,7 @@ def expand_markdown(source, html_mode, document_id=""):
     index = 0
     quiz_count = 0
     code_example_count = 0
+    code_block_count = 0
     admonition_count = 0
     while index < len(lines):
         line = lines[index]
@@ -702,6 +729,7 @@ def expand_markdown(source, html_mode, document_id=""):
         code_fence = CODE_FENCE.match(line)
         if code_fence:
             language = code_fence.group("language").lower()
+            code_block_count += 1
             index += 1
             code_lines = []
             while index < len(lines) and not CODE_FENCE_END.match(lines[index]):
@@ -717,14 +745,12 @@ def expand_markdown(source, html_mode, document_id=""):
                 output.append("```")
             elif PLAYBACK_TYPING_ATTR_RE.search(code_fence.group("attrs") or ""):
                 code_example_count += 1
-                output.append(render_html_typing_lesson(code_source, code_example_count, language))
+                output.append(render_html_typing_lesson(code_source, code_example_count, language, code_block_count))
             elif language == "c" and is_complete_c_program(code_source):
                 code_example_count += 1
-                output.append(render_html_code_example(code_source, code_example_count))
+                output.append(render_html_code_example(code_source, code_example_count, code_block_count))
             else:
-                output.append(f"```{language}")
-                output.extend(code_lines)
-                output.append("```")
+                output.append(render_html_code_block(language, code_lines, code_block_count))
             continue
         if QUIZ_START.match(line):
             block, index = collect_div_block(lines, index)
@@ -813,37 +839,23 @@ def replace_body(document, body):
     return BODY_RE.sub(lambda _match: f"<body>\n{body}\n</body>", document)
 
 
-def page_headings(body):
-    headings = []
-    for level, heading_id, content in HEAD_RE.findall(body):
-        headings.append({"level": int(level), "id": heading_id, "title": strip_tags(content)})
-    return headings
-
-
 def page_navigation_items(body):
     items = []
     for match in NAVIGATION_RE.finditer(body):
-        if match.group(1):
-            level, heading_id, content = match.group(1, 2, 3)
+        if match.group("heading_level"):
+            level = match.group("heading_level")
+            heading_id = match.group("heading_id")
+            content = match.group("heading_content")
             if heading_id == "ntfy-chat-group-title":
                 continue
             items.append({"type": "course", "level": int(level), "id": heading_id, "title": strip_tags(content)})
-        elif match.group(4):
-            items.append(
-                {
-                    "type": "exercise",
-                    "level": 2,
-                    "id": match.group(4),
-                    "title": html.unescape(match.group(5)),
-                }
-            )
         else:
             items.append(
                 {
-                    "type": "quiz",
+                    "type": match.group("nav_kind"),
                     "level": 2,
-                    "id": match.group(6),
-                    "title": html.unescape(match.group(7)),
+                    "id": match.group("nav_id"),
+                    "title": html.unescape(match.group("nav_title")),
                 }
             )
     return items
@@ -1446,7 +1458,7 @@ def admin_page(flow_items, question_bank):
 </article>
 """
             )
-        else:
+        elif item["type"] == "question":
             section_rows.append(
                 f"""
 <article class="admin-section admin-section--question list-group-item">
@@ -1455,6 +1467,25 @@ def admin_page(flow_items, question_bank):
     <div class="admin-section__title admin-section__title--h2">Question - {html.escape(item["title"])}</div>
   </div>
   <button class="btn btn-secondary btn-sm" type="button" data-flow-index="{index}">Poser</button>
+</article>
+"""
+            )
+        else:
+            content_labels = {
+                "admonition": "Encadré",
+                "exercise": "Exercice",
+                "code": "Code",
+                "guided-reading": "Lecture guidée",
+            }
+            content_label = content_labels.get(item["content_kind"], "Contenu")
+            section_rows.append(
+                f"""
+<article class="admin-section list-group-item">
+  <div>
+    <div class="admin-section__course">{html.escape(item["course_title"])} - {content_label}</div>
+    <div class="admin-section__title admin-section__title--h2">{html.escape(item["title"])}</div>
+  </div>
+  <button class="btn btn-outline-primary btn-sm" type="button" data-flow-index="{index}">Envoyer</button>
 </article>
 """
             )
@@ -1725,13 +1756,14 @@ def admin_page(flow_items, question_bank):
     }}
     const sectionIndex = item.type === "section" ? activeFlowIndex : nearestSectionIndex(activeFlowIndex);
     const section = flowItems[sectionIndex];
+    const previewItem = item.type === "content" ? item : section;
     previewTitle.textContent = item.type === "question" ? `Question - ${{item.title}}` : item.title;
     previewSubtitle.textContent = item.type === "question" ? `${{item.course_title}} - ${{item.quiz_title}}` : item.course_title;
-    if (!section?.href) {{
+    if (!previewItem?.href) {{
       previewFrame.removeAttribute("src");
       return;
     }}
-    previewFrame.src = section.href;
+    previewFrame.src = previewItem.href;
   }}
 
   function revealPreviewPlayer() {{
@@ -1749,8 +1781,7 @@ def admin_page(flow_items, question_bank):
         sibling = sibling.nextElementSibling;
       }}
       const exercise = player?.closest("details.embedded-exercise");
-      if (!exercise) return;
-      exercise.open = true;
+      if (exercise) exercise.open = true;
       target.scrollIntoView({{ block: "start" }});
     }} catch (_error) {{
       // The preview may be unavailable while its page is being replaced.
@@ -2076,7 +2107,7 @@ def admin_page(flow_items, question_bank):
     activeFlowIndex = index;
     localStorage.setItem(flowIndexKey, String(index));
     renderPreview();
-    if (item.type === "section") {{
+    if (item.type === "section" || item.type === "content") {{
       const url = new URL(item.href, window.location.href);
       publish(action("navigate", {{ url: url.href }}));
       closeResultsModal();

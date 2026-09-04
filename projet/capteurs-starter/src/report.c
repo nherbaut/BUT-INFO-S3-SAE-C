@@ -2,15 +2,15 @@
 
 int sensor_report_options_init(SensorReportOptions *options, const char *label)
 {
-    (void)label;
-
     if (options != NULL) {
         options->label = NULL;
     }
 
     /* TODO S4 : verifier le libelle, le copier avec strlen/malloc/memcpy,
-     * puis renvoyer 1. Refuser ',', '"', '\n' et '\r'. */
-    return 0;
+     * puis affecter la copie a options->label. Refuser ',', '"', '\n' et
+     * '\r'. Ce stub accepte un libelle non nul pour que le chargement des
+     * donnees des jalons precedents reste executable avant l'etape S4. */
+    return options != NULL && label != NULL;
 }
 
 void sensor_report_options_clear(SensorReportOptions *options)

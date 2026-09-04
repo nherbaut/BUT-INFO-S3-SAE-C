@@ -5,11 +5,13 @@
 #include <projet/sensor_source.h>
 
 #define SENSORS_URL "https://tribequa.org/assets/data/sensors-history.json"
+#define DEFAULT_CSV_PATH "rapport.csv"
+#define DEFAULT_REPORT_LABEL "Rapport capteurs"
 
 static void usage(const char *program)
 {
     fprintf(stderr,
-        "Usage: %s [--url URL | --file FICHIER] --csv FICHIER --label TEXTE\n",
+        "Usage: %s [--url URL | --file FICHIER] [--csv FICHIER] [--label TEXTE]\n",
         program);
 }
 
@@ -24,13 +26,23 @@ static int parse_options(int argc, char *argv[], ProgramOptions *options)
 {
     (void)argc;
     (void)argv;
-    (void)options;
+
+    if (options == NULL) {
+        return 0;
+    }
+
+    options->url = NULL;
+    options->file = NULL;
+    options->csv_path = DEFAULT_CSV_PATH;
+    options->label = DEFAULT_REPORT_LABEL;
 
     /* TODO S2/S4 : parcourir argv avec une boucle. Accepter --url URL ou
-     * --file FICHIER (au plus un), --csv FICHIER et --label TEXTE, dans
-     * n'importe quel ordre. Utiliser strcmp et refuser les options inconnues,
-     * dupliquees ou incompletes. Sans source, l'URL par defaut est utilisee. */
-    return 0;
+     * --file FICHIER (au plus un), ainsi que --csv FICHIER et --label TEXTE,
+     * dans n'importe quel ordre. Les deux derniers remplacent respectivement
+     * DEFAULT_CSV_PATH et DEFAULT_REPORT_LABEL. Utiliser strcmp et refuser les
+     * options inconnues, dupliquees ou incompletes. Sans source, l'URL par
+     * defaut est utilisee. */
+    return 1;
 }
 
 static int write_csv_report(
@@ -58,8 +70,6 @@ int main(int argc, char *argv[])
 
     sensor_dataset_init(&dataset);
 
-    /* Le stub TODO retourne toujours 0 avant son implementation. */
-    // cppcheck-suppress knownConditionTrueFalse
     if (!parse_options(argc, argv, &options)) {
         usage(argv[0]);
         return 2;

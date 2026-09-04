@@ -149,10 +149,12 @@ Dans `src/main.c`, implémentez `parse_options` avec une boucle sur `argv` et
 `strcmp`. Les options peuvent être fournies dans n'importe quel ordre :
 
 ```sh
-./build/capteurs [--url URL | --file FICHIER] --csv FICHIER --label TEXTE
+./build/capteurs [--url URL | --file FICHIER] [--csv FICHIER] [--label TEXTE]
 ```
 
-- `--csv` et `--label` sont obligatoires et uniques ;
+- `--csv` et `--label` sont facultatifs et ne peuvent être fournis qu'une fois ;
+- sans `--csv`, le fichier `rapport.csv` est utilisé ; sans `--label`, le
+  libellé `Rapport capteurs` est utilisé ;
 - `--url` et `--file` sont exclusifs ;
 - sans source explicite, l'URL par défaut est utilisée ;
 - une option inconnue, incomplète ou dupliquée affiche l'usage et retourne
