@@ -133,7 +133,7 @@ check-tools:
 	@echo "Environnement de développement prêt."
 
 cppcheck:
-	cppcheck --enable=warning,style,performance,portability --std=c11 --error-exitcode=1 --suppress=missingIncludeSystem -Iinclude src
+	cppcheck --enable=warning,style,performance,portability --inline-suppr --std=c11 --error-exitcode=1 --suppress=missingIncludeSystem -Iinclude src
 
 pdf: SUJET.md | $(BUILD_DIR)
 	pandoc --standalone --metadata title="Projet capteurs SAE-C" SUJET.md -o $(PROJECT_PDF)

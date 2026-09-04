@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
 
     sensor_dataset_init(&dataset);
 
+    /* Le stub TODO retourne toujours 0 avant son implementation. */
+    // cppcheck-suppress knownConditionTrueFalse
     if (!parse_options(argc, argv, &options)) {
         usage(argv[0]);
         return 2;
@@ -85,6 +87,8 @@ int main(int argc, char *argv[])
     }
 
     sensor_report_print(stdout, &dataset, &report_options);
+    /* Le stub TODO retourne toujours 0 avant son implementation. */
+    // cppcheck-suppress knownConditionTrueFalse
     if (!write_csv_report(options.csv_path, &dataset, &report_options)) {
         fprintf(stderr, "Impossible d'ecrire le rapport CSV.\n");
         sensor_report_options_clear(&report_options);
