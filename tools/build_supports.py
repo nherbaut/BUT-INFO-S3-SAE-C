@@ -2078,7 +2078,7 @@ def admin_page(flow_items, question_bank):
     renderPreview();
     if (item.type === "section") {{
       const url = new URL(item.href, window.location.href);
-      publish(url.href);
+      publish(action("navigate", {{ url: url.href }}));
       closeResultsModal();
       return;
     }}
@@ -2105,7 +2105,19 @@ def admin_page(flow_items, question_bank):
   }}
 
   function sendCurrentFlowItem() {{
-    sendFlowItem(activeFlowIndex === null ? 0 : activeFlowIndex);
+    if (activeFlowIndex === null) {{
+      setStatus("warning", "Aucune section courante dans le parcours.");
+      return;
+    }}
+    const sectionIndex = nearestSectionIndex(activeFlowIndex);
+    const section = flowItems[sectionIndex];
+    if (!section?.href) {{
+      setStatus("warning", "Aucune section courante dans le parcours.");
+      return;
+    }}
+    const url = new URL(section.href, window.location.href);
+    publish(action("navigate", {{ url: url.href }}));
+    closeResultsModal();
   }}
 
   function connectResponses() {{
