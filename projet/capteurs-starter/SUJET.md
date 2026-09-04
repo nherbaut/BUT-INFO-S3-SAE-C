@@ -2,8 +2,10 @@
 
 ## Objectif
 
-Vous allez construire un programme C qui analyse un historique de températures
-et d'humidité. Le programme charge un jeu de mesures, calcule des statistiques,
+Vous allez construire un programme C qui analyse les températures d'un
+historique de mesures. Chaque mesure contient aussi des valeurs d'humidité,
+mais les calculs demandés dans ce projet portent uniquement sur les
+températures. Le programme charge les mesures, calcule des statistiques,
 affiche un rapport dans le terminal et produit une synthèse CSV.
 
 Les données proviennent du flux suivant :
@@ -33,6 +35,10 @@ installez notamment `build-essential`, `libcurl4-openssl-dev`, `cppcheck` et
 Au départ, plusieurs tests échouent : c'est normal. Les fonctions à compléter
 contiennent des marqueurs `TODO`.
 
+Les tests fournis constituent un socle de développement. L'évaluation peut
+utiliser des tests complémentaires pour vérifier tous les contrats décrits
+dans ce sujet et dans les fichiers d'en-tête.
+
 ## Organisation
 
 | Répertoire ou fichier | Rôle |
@@ -59,6 +65,7 @@ Lisez les headers avant de modifier les sources. Utilisez uniquement
 | `make test-cli` | Vérifie un lancement complet avec fichier CSV. |
 | `make test` | Exécute tous les tests. |
 | `make memcheck` | Exécute les tests avec Valgrind. |
+| `make memcheck-series` | Vérifie isolément la mémoire de la série dynamique. |
 | `make cppcheck` | Analyse votre code dans `src/`. |
 | `make clean` | Supprime le répertoire `build/`. |
 
@@ -100,7 +107,7 @@ les fonctions de la phase 3, sans allocation dynamique.
 
 ## Jalon 3 — Mémoire dynamique, chaînes et fichiers (phase 4)
 
-### Série dynamique
+### Étape 3A — Série dynamique et Valgrind
 
 Dans `src/series.c` :
 
@@ -110,7 +117,9 @@ Dans `src/series.c` :
 4. libérez le tableau avec `free` dans `measure_series_clear` et réinitialisez
    la structure.
 
-### Libellé et rapport terminal
+Validez cette étape avec `make test-series` puis `make memcheck-series`.
+
+### Étape 3B — Libellé, rapport terminal et export CSV
 
 Dans `src/report.c`, `sensor_report_options_init` doit refuser un libellé nul,
 vide, ou contenant une virgule, un guillemet ou un retour à la ligne. Copiez un
@@ -121,7 +130,20 @@ dans `sensor_report_options_clear`.
 à jour, les minimums, maximums et moyennes intérieur/extérieur, ainsi que
 l'écart moyen.
 
-### Arguments et CSV
+Le rapport terminal doit suivre ce format :
+
+```text
+Rapport : Mesures locales
+Mesures: 3
+Mise a jour: 2026-09-24T08:30:00+02:00
+Temperature interieure: min=27.20 max=27.50 moyenne=27.33
+Temperature exterieure: min=27.60 max=27.90 moyenne=27.77
+Ecart interieur-exterieur moyen: -0.43
+```
+
+Validez cette étape avec `make test-report`.
+
+### Étape 3C — Arguments, CSV et intégration
 
 Dans `src/main.c`, implémentez `parse_options` avec une boucle sur `argv` et
 `strcmp`. Les options peuvent être fournies dans n'importe quel ordre :

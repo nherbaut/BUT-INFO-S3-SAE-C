@@ -36,8 +36,9 @@ make memcheck
 make clean
 ```
 
-## Jalons proposes
+## Jalons proposés
 
-Le projet capteurs suit quatre jalons: prise en main autonome, statistiques sur
-pile, serie dynamique avec Valgrind, puis version candidate pour l'evaluation.
-Consulter `capteurs-starter/SUJET.md` pour les dates et commandes associees.
+Le projet capteurs suit trois jalons : prise en main autonome, statistiques sur
+pile, puis une phase finale organisée en trois étapes (série dynamique,
+rapports, CLI/CSV). Consulter `capteurs-starter/SUJET.md` pour les commandes
+associées.

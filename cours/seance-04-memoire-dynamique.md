@@ -361,19 +361,10 @@ et `scanf` sur un fichier. `fgets` et `fputs` lisent ou écrivent des chaînes ;
 de sa chaîne avec `realloc` et doit donc être suivi de la libération de cette
 chaîne.
 
-```technical
-Une déclaration `enum` crée des constantes entières nommées. Dans cet exercice,
-elle évite les valeurs « magiques » pour les tailles des tableaux de caractères
-et des lignes lues dans le fichier :
-
-    enum {
-        TEXTE_MAX = 32,
-        LIGNE_MAX = 128
-    };
-
-`TEXTE_MAX` et `LIGNE_MAX` sont des `int` constants. Sans valeur explicite,
-le premier élément d'un `enum` vaut `0`, puis chaque élément suivant vaut un de
-plus. Ici, les valeurs sont fixées explicitement pour documenter leur rôle.
+```remember
+Les énumérations vues en phase 3 peuvent aussi servir à nommer des constantes.
+Dans l'exercice suivant, `TEXTE_MAX` et `LIGNE_MAX` remplacent ainsi des tailles
+« magiques » par des noms qui documentent leur rôle.
 ```
 
 {{ c_exercise: exercices/seance-04/annuaire-csv }}

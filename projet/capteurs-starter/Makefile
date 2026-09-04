@@ -29,7 +29,7 @@ LIB_OBJS := \
 	$(BUILD_DIR)/report.o \
 	$(BUILD_DIR)/cJSON.o
 
-.PHONY: all run test test-statistics test-series test-source test-report test-cli memcheck memcheck-tests memcheck-run memcheck-scenario check-tools cppcheck pdf clean student-tarball
+.PHONY: all run test test-statistics test-series test-source test-report test-cli memcheck memcheck-tests memcheck-series memcheck-cli memcheck-run memcheck-scenario check-tools cppcheck pdf clean
 
 all: $(PROGRAM)
 
@@ -70,17 +70,17 @@ $(PROGRAM): $(BUILD_DIR)/main.o $(LIB_OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(TEST_STATISTICS): $(BUILD_DIR)/test_statistics.o $(BUILD_DIR)/statistics.o
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ -lm -o $@
 
 $(TEST_SERIES): $(BUILD_DIR)/test_series.o $(BUILD_DIR)/series.o
 
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ -o $@
 
 $(TEST_SOURCE): $(BUILD_DIR)/test_source.o $(BUILD_DIR)/series.o $(BUILD_DIR)/sensor_source.o $(BUILD_DIR)/cJSON.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(TEST_REPORT): $(BUILD_DIR)/test_report.o $(BUILD_DIR)/report.o $(BUILD_DIR)/statistics.o
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ -lm -o $@
 
 run: $(PROGRAM)
 	./$(PROGRAM)
@@ -102,13 +102,22 @@ test-report: $(TEST_REPORT)
 test-cli: $(PROGRAM)
 	sh tests/test_cli.sh ./$(PROGRAM)
 
-memcheck: memcheck-tests
+memcheck: memcheck-tests memcheck-cli
+
+memcheck-series: $(TEST_SERIES)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SERIES)
 
 memcheck-tests: $(TEST_STATISTICS) $(TEST_SERIES) $(TEST_SOURCE) $(TEST_REPORT)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_STATISTICS)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SERIES)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SOURCE)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_REPORT)
+
+memcheck-cli: $(PROGRAM)
+	@csv_file=$$(mktemp); trap 'rm -f "$$csv_file"' EXIT HUP INT TERM; \
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) --label "Memcheck CLI" \
+		--csv "$$csv_file" --file tests/data/sensors-history.json; \
+	test -s "$$csv_file"
 
 memcheck-run: $(PROGRAM)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(PROGRAM) $(ARGS)
@@ -128,9 +137,6 @@ cppcheck:
 
 pdf: SUJET.md | $(BUILD_DIR)
 	pandoc --standalone --metadata title="Projet capteurs SAE-C" SUJET.md -o $(PROJECT_PDF)
-
-student-tarball:
-	python3 ../../tools/export_capteurs_starter.py
 
 clean:
 	rm -rf $(BUILD_DIR)

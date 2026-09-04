@@ -1,73 +1,72 @@
-# Phase 5 - Projet, bonnes pratiques et evaluation
+# Phase 5 - Atelier d'aide au projet
 
 ## Objectifs
 
-- Finaliser le projet capteurs a partir de la version candidate.
-- Verifier compilation, tests et memoire.
-- Lire le rapport produit a partir du flux live et de la fixture locale.
-- Realiser une evaluation individuelle courte sur machine.
+- Débloquer les difficultés rencontrées sur le projet capteurs.
+- Finaliser une version candidate compilable, testée et sans fuite mémoire.
+- Relire les contrats des fonctions et améliorer l'organisation du code.
+- S'entraîner à expliquer et modifier son propre projet.
 
-## Retour sur le jalon autonome 3
+## Diagnostic de la version candidate
 
-La phase commence par la verification de `make test` et `make memcheck`. Les
-erreurs de capacite, de pointeur, de liberation et de rapport sont corrigees a
-partir du code apporte par les etudiants.
+Commencez par exécuter `make test`, `make memcheck` et `make cppcheck`. À partir
+des résultats, isolez un seul problème à la fois : contrat non respecté,
+allocation, pointeur, chaîne, écriture de fichier ou analyse des arguments.
 
-## Integrer le rapport
+Avant de modifier du code, relisez le header concerné et ajoutez ou corrigez le
+test qui décrit le comportement attendu.
+
+## Vérifier l'intégration complète
 
 Le rapport terminal s'appuie uniquement sur les structures et fonctions du
-projet. Le reseau, les fichiers et le JSON restent dans `provided/` et ne sont
-pas a modifier.
+projet. Le réseau, les fichiers et le JSON restent dans `provided/` et ne sont
+pas à modifier.
 
 ```bash
 cd projet/capteurs-starter
 make
-./build/capteurs --file tests/data/sensors-history.json
+./build/capteurs --file tests/data/sensors-history.json \
+  --csv rapport.csv --label "Mesures locales"
 make run
 ```
+
+Vérifiez le contenu du CSV, les erreurs affichées en cas de mauvais argument et
+le nettoyage de la mémoire sur le chemin normal comme sur les chemins d'erreur.
 
 ## Bonnes pratiques
 
 - Traiter les warnings avant de continuer.
-- Verifier les retours de `malloc` et `realloc`.
-- Ne pas utiliser un pointeur apres `free`.
-- Garder les details internes dans les fichiers `.c` avec `static`.
-- Isoler les bibliotheques fournies derriere un en-tete public.
+- Vérifier les retours de `malloc` et `realloc`.
+- Ne pas utiliser un pointeur après `free`.
+- Garder les détails internes dans les fichiers `.c` avec `static`.
+- Isoler les bibliothèques fournies derrière un en-tête public.
 
 La page [Bonnes pratiques C](bonnes-pratiques.html) sert de support de
-reference pour ces points.
+référence pour ces points.
 
-## Finalisation accompagnee
+## Atelier de finalisation
 
-Pendant environ 45 minutes, les etudiants stabilisent leur version candidate,
-completent les tests utiles et verifient la memoire avec Valgrind.
+Utilisez ce temps pour stabiliser votre version candidate, compléter les tests
+utiles et vérifier la mémoire avec Valgrind. Demandez de l'aide avec un élément
+précis : la commande lancée, le message obtenu, le fichier concerné et ce que
+vous avez déjà essayé.
 
-## Travail personnel et traçabilité
+## Méthode de travail
 
 Le dépôt doit montrer une progression régulière, avec des commits personnels
 décrivant les étapes significatives du travail. Les étudiants peuvent consulter
 la documentation, les supports, les manuels et les exemples fournis ; en cas de
 doute sur une ressource, ils la signalent à l'enseignant.
 
-L'historique Git sert à suivre la progression, mais ne constitue pas à lui seul
-une preuve d'auteur. L'évaluation individuelle sur machine repose sur le code
-apporté par l'étudiant et sur sa capacité à le lire, l'expliquer et le modifier.
+Faites des commits courts et explicites après chaque étape fonctionnelle. Vous
+devez pouvoir retrouver une modification, expliquer son intention et revenir à
+un test qui la justifie.
 
-## Évaluation
+## Checklist de version candidate
 
-Consultez les [modalités d'évaluation de la SAE C](evaluation.html) pour le
-nom attendu du dépôt, l'ajout de l'enseignant comme mainteneur, la répartition
-de la note et le déroulement du DS individuel de 45 minutes dans la branche
-`ds`.
-
-La version utilisée pendant le DS doit compiler avec `make` et passer `make
-test` et `make memcheck` avant l'évaluation.
-
-## Depot attendu
-
-- fichiers `src/`, `include/` et `tests/` modifies;
-- aucune modification dans `provided/`;
-- Makefile fonctionnel;
-- tests verts et absence de fuite signalee par Valgrind.
-- historique Git avec commits personnels et réguliers.
-- branche `ds` créée pendant le DS pour la fonctionnalité individuelle.
+- les fichiers `src/`, `include/` et `tests/` sont cohérents ;
+- `provided/` n'a pas été modifié ;
+- le Makefile fonctionne depuis un répertoire propre ;
+- `make test`, `make memcheck` et `make cppcheck` passent ;
+- le rapport terminal et le CSV ont été vérifiés avec le jeu local ;
+- l'historique Git contient des commits personnels et réguliers.

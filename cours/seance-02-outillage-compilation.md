@@ -274,8 +274,8 @@ description: Sélectionnez les associations correctes entre un répertoire et so
 ## Utilisation des arguments de ligne de commande en C
 
 La fonction `main` peut recevoir le nombre d'arguments dans `argc` et leurs valeurs dans
-`argv`. A cette phase, on utilise `argc` pour vérifier la forme de la commande;
-la manipulation détaillée des chaînes contenues dans `argv` sera vue en phase 3.
+`argv`. À cette phase, on utilise `argc` pour vérifier la forme de la commande ;
+la manipulation détaillée des chaînes contenues dans `argv` sera vue en phase 4.
 
 ```c
 #include <stdio.h>

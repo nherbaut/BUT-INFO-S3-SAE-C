@@ -126,6 +126,28 @@ void ajouter_une_minute(struct Duree *duree)
 Les initialiseurs désignés rendent le code lisible. On utilise `.` avec une
 structure et `->` avec un pointeur vers une structure.
 
+## Énumérations
+
+```technical
+Une énumération définit un type dont les valeurs possibles portent un nom. Elle
+évite de représenter un choix par des nombres sans signification explicite.
+
+~~~c
+typedef enum {
+    TEMPERATURE_INDOOR,
+    TEMPERATURE_OUTDOOR
+} TemperatureKind;
+~~~
+
+Sans valeur indiquée, `TEMPERATURE_INDOOR` vaut `0`, puis
+`TEMPERATURE_OUTDOOR` vaut `1`. Une fonction recevant un `TemperatureKind` doit
+malgré tout vérifier la valeur reçue : un cast peut produire une valeur qui ne
+correspond à aucun membre de l'énumération.
+```
+
+Dans le projet capteurs, `TemperatureKind` indique si une fonction doit traiter
+la température intérieure ou extérieure.
+
 ## Tester avec `assert`
 
 `assert(condition)` arrête le programme si la condition est fausse et indique
@@ -153,4 +175,3 @@ son adresse avec `&`, le déréférencement et la notation `->`. Il est entière
 exécutable dans le navigateur.
 
 {{ c_exercise: exercices/seance-03/duree }}
-

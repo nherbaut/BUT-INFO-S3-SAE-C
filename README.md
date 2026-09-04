@@ -49,4 +49,4 @@ Le parcours alterne cinq phases encadrees et trois jalons autonomes :
 1. Phase 1, puis jalon autonome 1 de prise en main.
 2. Phases 2 et 3, puis jalon autonome 2 de statistiques sur la pile.
 3. Phase 4, puis jalon autonome 3 de serie dynamique et version candidate.
-4. Phase 5 de finalisation et evaluation.
+4. Phase 5 d'aide à la finalisation du projet.

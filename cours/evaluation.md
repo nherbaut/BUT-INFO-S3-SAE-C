@@ -24,7 +24,12 @@ la réaliser individuellement dans une branche nommée `ds`.
 
 Le projet utilisé pour le DS doit être votre **fork privé réalisé en binôme**.
 L'enseignant doit y avoir été invité avec le rôle de **mainteneur**. Créez la
-branche `ds` dans ce fork avant de commencer l'épreuve.
+branche `ds` dans ce fork avant de commencer l'épreuve. À la fin du DS,
+commitez votre travail puis poussez cette branche dans le fork.
+
+Avant le DS, la branche rendue doit compiler et passer `make test` ainsi que
+`make memcheck`. Cette vérification de conformité garantit une base commune
+fonctionnelle pour l'épreuve individuelle.
 
 Vous devrez donc être capable de lire votre code, d'en expliquer les choix et
 de le modifier de façon autonome. La fonctionnalité donnée au DS sera conçue

@@ -381,6 +381,35 @@ Le code de format doit correspondre au type de l'argument. Une incohérence peut
 produire un warning ou un comportement indéfini : les warnings de compilation
 doivent donc être lus et corrigés.
 
+```trap
+### Conversions de types : un cast ne rend pas une valeur plus sûre
+
+Un *cast* écrit explicitement une conversion : `(int) valeur`. Il ne préserve
+pas les informations qui ne tiennent pas dans le type de destination.
+
+~~~c
+long population = 3000000000L;
+int population_courte = (int)population; /* valeur hors de la plage de int */
+
+double mesure = 1.234567890123;
+float mesure_courte = (float)mesure;     /* précision perdue */
+
+float moyenne = 12.9f;
+int note = (int)moyenne;                 /* 12 : partie décimale supprimée */
+~~~
+
+- `long` vers `int` : vérifiez que la valeur est dans la plage de `int` avant
+  la conversion ; hors plage, le résultat ne doit pas être utilisé comme une
+  valeur fiable.
+- `double` vers `float` : la valeur est arrondie à la précision plus faible de
+  `float`.
+- `float` vers `int` : la conversion tronque vers zéro (`-2.8f` devient `-2`) ;
+  une valeur hors de la plage de `int` ne doit pas être convertie.
+
+Utilisez un cast seulement lorsque cette perte est voulue et comprise. Un cast
+peut faire taire un warning, mais ne corrige pas une erreur de conception.
+```
+
 #### Lire avec `scanf`
 
 Lire une valeur consiste à analyser ce qui a été saisi puis à placer la valeur

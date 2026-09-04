@@ -14,7 +14,8 @@ typedef struct {
 } SensorReportOptions;
 
 /* Renvoie 0 si un argument est invalide, si le CSV serait ambigu ou en cas
- * d'echec d'allocation. */
+ * d'echec d'allocation. Si options est valide, options->label vaut NULL apres
+ * un echec. */
 int sensor_report_options_init(SensorReportOptions *options, const char *label);
 void sensor_report_options_clear(SensorReportOptions *options);
 

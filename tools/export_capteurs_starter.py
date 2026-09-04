@@ -15,6 +15,10 @@ STUDENT_SUBJECT = ROOT / "projet" / "capteurs-starter" / "SUJET.md"
 OUTPUT = ROOT / "dist" / "capteurs-starter.tar.gz"
 STUDENT_DEFINE = "STUDENT_VERSION"
 INCLUDE_DIRECTIVE = re.compile(r"^(\s*#\s*include\s+[^\n]+)$", re.MULTILINE)
+STUDENT_TARBALL_TARGET = re.compile(
+    r"\nstudent-tarball:\n\tpython3 ../../tools/export_capteurs_starter\.py\n",
+    re.MULTILINE,
+)
 
 
 def student_source(source_path):
@@ -40,6 +44,13 @@ def student_source(source_path):
     return output
 
 
+def prepare_student_makefile(makefile_path):
+    source = makefile_path.read_text(encoding="utf-8")
+    source = source.replace(" student-tarball", "")
+    source = STUDENT_TARBALL_TARGET.sub("\n", source)
+    makefile_path.write_text(source, encoding="utf-8")
+
+
 def main():
     if not SOLUTION_PROJECT.is_dir():
         raise FileNotFoundError(
@@ -58,6 +69,7 @@ def main():
         if teacher_readme.exists():
             teacher_readme.unlink()
         shutil.copy2(STUDENT_SUBJECT, archive_root / "SUJET.md")
+        prepare_student_makefile(archive_root / "Makefile")
         for source_path in (archive_root / "src").glob("*.c"):
             source_path.write_text(student_source(source_path), encoding="utf-8")
         with tarfile.open(OUTPUT, "w:gz") as archive:

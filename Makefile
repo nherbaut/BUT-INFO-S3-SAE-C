@@ -9,7 +9,10 @@ EXERCISES := \
 
 # Certains starters sont volontairement incomplets et sont validés par les
 # étudiants pendant le cours ; ils ne font pas partie de la CI du dépôt.
-TEST_EXERCISES := $(filter-out exercices/seance-01/max3,$(EXERCISES))
+TEST_EXERCISES := $(filter-out \
+	exercices/seance-01/max3 \
+	exercices/seance-04/tableau-dynamique, \
+	$(EXERCISES))
 
 PROJECT := projet/starter
 SENSORS_PROJECT := projet/capteurs-starter
@@ -35,7 +38,7 @@ test:
 	set -e; for dir in $(TEST_EXERCISES) $(PROJECT); do $(MAKE) -C $$dir test; done
 
 memcheck:
-	set -e; for dir in $(EXERCISES) $(PROJECT); do $(MAKE) -C $$dir memcheck; done
+	set -e; for dir in $(TEST_EXERCISES) $(PROJECT); do $(MAKE) -C $$dir memcheck; done
 
 supports: $(COURSES)
 	python3 tools/build_supports.py
@@ -57,7 +60,7 @@ capteurs:
 	$(MAKE) -C $(SENSORS_PROJECT)
 
 capteurs-student-tarball:
-	$(MAKE) -C $(SENSORS_PROJECT) student-tarball
+	python3 tools/export_capteurs_starter.py
 
 check-tools:
 	$(MAKE) -C $(SENSORS_PROJECT) check-tools

@@ -5,64 +5,51 @@ Les jalons structurent le travail personnel à réaliser entre les phases encadr
 Les modalités de rendu et la répartition de la note sont décrites dans la page
 [Évaluation de la SAE C](evaluation.html).
 
-## Jalon autonome 1 - Comprendre le projet
+## Jalon autonome 1 - Prise en main (phases 1 et 2)
 
-Sans modifier le projet, clonez le dépôt, ouvrez le projet dans VS Code et
-vérifiez l'environnement avec `make check-tools`, `make`, `make test` et
-`make cppcheck`.
+Sans modifier le projet, ouvrez-le dans VS Code et vérifiez l'environnement
+avec `make check-tools`, `make`, `make test` et `make cppcheck`.
 
-Lisez ensuite le README du projet capteurs, consultez les attendus pour le
-rapport et proposez des cas de test pour minimum, maximum, moyenne et écart
-intérieur-extérieur.
+Lisez ensuite le `SUJET.md` du projet capteurs et repérez le rôle de `src/`,
+`include/`, `tests/`, `provided/` et du Makefile. Distinguez le code à
+compléter du code fourni.
 
 Le [sujet du projet capteurs est également disponible au format PDF](assets/pdf/projet-capteurs.pdf).
 
-Notez les questions et difficultés que vous avez eux, nous les aborderons pendant la phase 2.
+Notez les questions et difficultés que vous avez eues ; nous les aborderons
+pendant la phase 2.
 
 ### Prise en main locale
 
 La prise en main locale est réalisée pendant ce jalon. Vérifiez les choix de
-tests proposés et notez les erreurs rencontrées pendant le clonage, la
+tests proposés et notez les erreurs rencontrées pendant l'ouverture du projet, la
 compilation, l'exécution ou l'analyse statique.
 
-### Cloner le depot
+### Ouvrir le projet fourni
 
 ```todo
-Dans un terminal, clonez le depot puis ouvrez le dossier du projet avec les commandes ci-dessous.
+Dans un terminal, ouvrez le dossier du projet fourni avec les commandes ci-dessous.
 ```
 
 ```bash {playback=typing}
-## Clone du projet
-# à partir de gitlab
-(base) nherbaut@ares:~/tmp$ git clone https://github.com/nherbaut/BUT-INFO-S3-SAE-C.git
-##
-
-Cloning into 'BUT-INFO-S3-SAE-C'...
-remote: Enumerating objects: 468, done.
-remote: Counting objects: 100% (468/468), done.
-remote: Compressing objects: 100% (311/311), done.
-remote: Total 468 (delta 167), reused 409 (delta 109), pack-reused 0 (from 0)
-Receiving objects: 100% (468/468), 2.78 MiB | 11.39 MiB/s, done.
-Resolving deltas: 100% (167/167), done.
-
 ## ouvrir le projet
 # On ouvre le répertoire du projet
-(base) nherbaut@ares:~/tmp$ cd BUT-INFO-S3-SAE-C/projet/capteurs-starter/
+(base) nherbaut@ares:~/projet-sae-c$ cd projet/capteurs-starter/
 ##
 
 ## Utilisation du Makefile
-# l'outil make utilise le fichier Makefile pour savoir comment réaliser toutes les opérations du cycle de développement. Compilation, exécution de test, lancement du programme, vérification de la mémoire...
-# l'argument passé à make est appelé une **target**.
-# Ici, la target `build/capteurs` construit le projet
+# L'outil make utilise le fichier Makefile pour automatiser les opérations du cycle de développement : compilation, tests, lancement du programme et vérification de la mémoire.
+# L'argument passé à make est appelé une cible (target).
+# Ici, la cible `build/capteurs` construit le projet.
 (base) nherbaut@ares:~/tmp/BUT-INFO-S3-SAE-C/projet/capteurs-starter$ make build/capteurs
 ##
 
 mkdir -p build
 
 ## Exécution du préprocesseur et compilation au stade objet.
-# Cette série de commandes exécutée par le Makefile réalise deux opérations en un seule commande
-# 1/ le préprocesseur. Celui-ci modifie le code source en utilisant les directives telles que #ifdef #define...
-# 2/ la compilation au stade objet. Le code C est transformé en code machine non exécutable et en symboles en attente de liaison
+# Cette commande exécutée par le Makefile réalise deux opérations.
+# 1/ Le préprocesseur modifie le code source à partir des directives telles que #ifdef et #define.
+# 2/ La compilation produit du code machine non encore exécutable et des symboles en attente de liaison.
 cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -Wextra -Wpedantic -c src/main.c -o build/main.o
 ##
 ## Détail d'une commande de compilation
@@ -70,22 +57,22 @@ cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -We
 cc \
 ##
 ## Headers
-# Ici, on spécifie quels sont les répertoire contenant les headers c (*.h)
+# Ici, on indique les répertoires contenant les headers C (*.h).
 -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu \
 ##
 ## Options de compilation
-# Ici, on spécifie le standard C à utiliser (C11), et le niveau de Warning retourné:
-# all: tous les warning
-# extra: encore plus de warning
-# pedantic: respect strict du standard C
+# Ici, on indique le standard C à utiliser (C11) et le niveau de warnings demandé :
+# all : tous les warnings courants
+# extra : des warnings supplémentaires
+# pedantic : respect strict du standard C
 -std=c11 -Wall -Wextra -Wpedantic\
 ##
 ## Spécification du source
 # Le source est ensuite passé à l'aide de l'option -c
 -c src/series.c\
 ##
-## Specification de la cible
-# Le fichier objet cible à créer est ensuite indiqué
+## Spécification de la cible
+# Le fichier objet à créer est ensuite indiqué.
 -o build/series.o
 ##
 ## *.c => *.c
@@ -97,13 +84,13 @@ cc -Iinclude -Iprovided/cjson -I/usr/include/x86_64-linux-gnu -std=c11 -Wall -We
 ##
 
 ## Edition de liens
-# Dernière étape de la compilation, le linker prend les fichiers objets produits (*.o), les librairies tières pour générer un exécutable unique.
+# Dernière étape de la construction : l'éditeur de liens réunit les fichiers objets (*.o) et les bibliothèques tierces pour produire un exécutable.
 cc \
 ##
 ## On commence par les objets
 build/main.o build/series.o build/statistics.o build/sensor_source.o build/report.o build/cJSON.o\
 ##
-## Puis les librairies tierces (ici, math et curl)
+## Puis les bibliothèques tierces (ici, math et curl)
 -lm -lcurl  \
 ##
 ## Et on finit par spécifier le nom de l'exécutable
@@ -117,8 +104,8 @@ build/main.o build/series.o build/statistics.o build/sensor_source.o build/repor
 Depuis `projet/capteurs-starter`, exécutez `make check-tools`, puis `make cppcheck`.
 ```
 
-`check-tools` vérifie que le compilateur, Make, `pkg-config`, `libcurl` et
-`cppcheck` sont disponibles. `cppcheck` analyse uniquement `src/`, c'est-à-dire
+`check-tools` vérifie que le compilateur, Make, `cppcheck` et Valgrind sont
+disponibles. `cppcheck` analyse uniquement `src/`, c'est-à-dire
 le code à modifier ; il n'analyse ni le réseau ni le parseur JSON fournis.
 
 ### Première préparation des statistiques
@@ -130,7 +117,7 @@ attendu lorsque le tableau est vide. Ces choix seront discutés avant le jalon 2
 
 ### Ouvrir le projet avec VS Code
 
-Avant d'ouvrir le projet avec vscode, nous devons installer 2 extensions utiles pour le développement C.
+Avant d'ouvrir le projet avec VS Code, installez deux extensions utiles pour le développement C.
 
 ```todo
 Dans un terminal, tapez les commandes suivantes:
@@ -141,9 +128,9 @@ code  --install-extension ms-vscode.makefile-tools
 code  --install-extension ms-vscode.cpptools-extension-pack
 ```
 
-Ouvez ensuite le répertoire `exercices/seance-02/compilation-separee` avec vscode (File>Open Folder)
+Ouvrez ensuite le répertoire `exercices/seance-02/compilation-separee` avec VS Code (`File > Open Folder`).
 
-Vous devez ensuite configurer VSCode pour qu'il utilise les bonnes target du makefile:
+Configurez ensuite VS Code pour qu'il utilise les bonnes cibles du Makefile :
 
 ```todo
 reproduisez la configuration suivante
@@ -168,32 +155,47 @@ Vous pouvez ensuite utiliser la petite boite de contrôle du debugger ou les rac
 ![contrôles du débug](assets/vscode-debug-box.png)
 
 ```todo
-lancez le programme en debug, et naviguez dans l'éxécution de votre code. Constatez d'un survol des variables en cours d'exécution affiche leur valeur
+Lancez le programme avec le débogueur et parcourez son exécution. Survolez les
+variables pour afficher leur valeur courante.
 ```
 
-## Jalon autonome 2 - Statistiques sans allocation dynamique
+## Jalon autonome 2 - Fonctions, pointeurs et structures (phase 3)
 
 Implémentez `temperature_statistics_compute` et
-`temperature_average_gap`. Le test `tests/test_statistics.c` construit deja un
-tableau de mesures sur la pile : il n'y a donc encore ni `malloc` ni `realloc` a
-utiliser.
+`temperature_average_gap`. Le test `tests/test_statistics.c` construit déjà un
+tableau de mesures sur la pile : il n'y a donc encore ni `malloc` ni `realloc`
+à utiliser. Implémentez les deux fonctions, y compris les cas de pointeur nul,
+série vide et `TemperatureKind` invalide.
 
 ```bash
 cd projet/capteurs-starter
 make test-statistics
+make cppcheck
 ```
 
-## Jalon autonome 3 - Serie dynamique et version finale du projet
+## Jalon autonome 3 - Mémoire dynamique, chaînes et fichiers (phase 4)
 
-Implémentez `measure_series_append` et `measure_series_clear`,
-puis le rapport terminal. Le test de serie ajoute 17 mesures afin de forcer
-l'agrandissement du tableau.
+Réalisez les trois étapes suivantes dans l'ordre :
+
+1. **3A — série dynamique et Valgrind** : implémentez
+   `measure_series_append` et `measure_series_clear`. Le test de série ajoute
+   17 mesures afin de forcer l'agrandissement du tableau. Validez avec
+   `make test-series` et `make memcheck-series`.
+2. **3B — libellé, rapport terminal et export CSV** : gérez le libellé
+   dynamique, puis produisez le rapport terminal au format demandé et l'export
+   CSV de synthèse. Validez avec
+   `make test-report`.
+3. **3C — CLI et intégration** : complétez l'analyse des options et validez le
+   programme complet sur le fichier local avec `--csv` et `--label`.
 
 ```bash
 cd projet/capteurs-starter
 make test-series
+make memcheck-series
+make test-report
 make test
+make cppcheck
 make memcheck
 ```
 
-La version obtenue est celle apportee a la phase finale.
+La version obtenue est celle apportée à la phase finale.
