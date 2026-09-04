@@ -32,6 +32,23 @@ développement `libcurl`, de `cppcheck` et de Valgrind. Sous Debian ou Ubuntu,
 installez notamment `build-essential`, `libcurl4-openssl-dev`, `cppcheck` et
 `valgrind`.
 
+### Configurer VS Code avec Makefile Tools
+
+1. Installez les extensions **C/C++** et **Makefile Tools** (éditeur :
+   Microsoft) depuis l'onglet Extensions de VS Code.
+2. Ouvrez directement le dossier `projet/capteurs-starter` avec **Fichier >
+   Ouvrir un dossier** : son `Makefile` doit être à la racine du dossier ouvert.
+3. Ouvrez la palette de commandes (`Ctrl+Maj+P`), exécutez
+   `Makefile: Configure`, puis acceptez la proposition d'utiliser Makefile
+   Tools comme fournisseur de configuration C/C++ si VS Code l'affiche.
+4. Pour choisir une cible, exécutez `Makefile: Set the target to be built by
+   make` (par exemple `test-statistics`, `test-series` ou `test`). Lancez-la
+   ensuite avec `Makefile: Build the current target`.
+
+La cible par défaut est `all` : `Makefile: Build the current target` équivaut
+alors à `make`. Aucune configuration `.vscode` n'est fournie avec le starter :
+la détection est automatique lorsque le dossier ouvert contient le `Makefile`.
+
 Au départ, plusieurs tests échouent : c'est normal. Les fonctions à compléter
 contiennent des marqueurs `TODO`.
 
