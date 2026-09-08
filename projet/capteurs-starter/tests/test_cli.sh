@@ -70,10 +70,12 @@ fi
 actual_header=$(head -n 1 "$csv_file")
 expect_equal 'En-tete CSV' "$expected_header" "$actual_header"
 
+# Le libelle est facultatif : son absence doit utiliser le libelle par defaut.
+expect_exit 0 'label absent : utilisation du libelle par defaut' \
+    "$program" --file tests/data/sensors-history.json --csv "$csv_file"
+
 # Les cas suivants sont des erreurs de syntaxe des options : parse_options
 # affiche l'usage et main retourne donc 2, avant tout chargement de donnees.
-expect_exit 2 '--csv est present mais sa valeur est absente : erreur d usage' \
-    "$program" --file tests/data/sensors-history.json --csv "$csv_file"
 expect_exit 2 '--label est present mais sa valeur est absente : erreur d usage' \
     "$program" --label
 expect_exit 2 '--csv est present sans valeur apres un label valide : erreur d usage' \
