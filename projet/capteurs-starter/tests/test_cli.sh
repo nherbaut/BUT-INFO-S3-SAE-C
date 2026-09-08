@@ -21,7 +21,8 @@ show_file() {
 
 expect_exit() {
     expected=$1
-    shift
+    reason=$2
+    shift 2
 
     if "$@" >"$stdout_file" 2>"$stderr_file"; then
         actual=0
@@ -30,6 +31,7 @@ expect_exit() {
     fi
 
     if test "$actual" -ne "$expected"; then
+        printf 'Scenario : %s\n' "$reason" >&2
         printf 'Code de sortie incorrect. Attendu : %s ; obtenu : %s\n' \
             "$expected" "$actual" >&2
         printf 'Commande :' >&2
@@ -56,7 +58,8 @@ expect_equal() {
 
 expected_header='label,updated_at,count,indoor_minimum,indoor_maximum,indoor_average,outdoor_minimum,outdoor_maximum,outdoor_average,average_gap'
 
-expect_exit 0 "$program" --label "Essai CLI" --csv "$csv_file" \
+expect_exit 0 'arguments valides : le programme doit produire le CSV' \
+    "$program" --label "Essai CLI" --csv "$csv_file" \
     --file tests/data/sensors-history.json
 
 if ! test -s "$csv_file"; then
@@ -67,26 +70,41 @@ fi
 actual_header=$(head -n 1 "$csv_file")
 expect_equal 'En-tete CSV' "$expected_header" "$actual_header"
 
-expect_exit 2 "$program" --file tests/data/sensors-history.json --csv "$csv_file"
-expect_exit 2 "$program" --label
-expect_exit 2 "$program" --label "Essai" --csv
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" --unknown valeur
-expect_exit 2 "$program" --label "Essai" --label "Double" --csv "$csv_file"
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" --csv "$csv_file"
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" \
+# Les cas suivants sont des erreurs de syntaxe des options : parse_options
+# affiche l'usage et main retourne donc 2, avant tout chargement de donnees.
+expect_exit 2 '--csv est present mais sa valeur est absente : erreur d usage' \
+    "$program" --file tests/data/sensors-history.json --csv "$csv_file"
+expect_exit 2 '--label est present mais sa valeur est absente : erreur d usage' \
+    "$program" --label
+expect_exit 2 '--csv est present sans valeur apres un label valide : erreur d usage' \
+    "$program" --label "Essai" --csv
+expect_exit 2 'option inconnue --unknown : erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" --unknown valeur
+expect_exit 2 '--label est fourni deux fois : option dupliquee, erreur d usage' \
+    "$program" --label "Essai" --label "Double" --csv "$csv_file"
+expect_exit 2 '--csv est fourni deux fois : option dupliquee, erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" --csv "$csv_file"
+expect_exit 2 '--file est fourni deux fois : option dupliquee, erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" \
     --file tests/data/sensors-history.json --file tests/data/sensors-history.json
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" \
+expect_exit 2 '--url est fourni deux fois : option dupliquee, erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" \
     --url https://example.invalid/ --url https://example.invalid/
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" \
+expect_exit 2 '--file et --url sont exclusifs : erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" \
     --file tests/data/sensors-history.json --url https://example.invalid/
-expect_exit 2 "$program" --label "Essai" --csv "$csv_file" \
+expect_exit 2 '--url et --file sont exclusifs : erreur d usage' \
+    "$program" --label "Essai" --csv "$csv_file" \
     --url https://example.invalid/ --file tests/data/sensors-history.json
-expect_exit 1 "$program" --label "" --csv "$csv_file" \
+expect_exit 1 'label vide : option comprise, mais libelle de rapport invalide' \
+    "$program" --label "" --csv "$csv_file" \
     --file tests/data/sensors-history.json
-expect_exit 1 "$program" --label "Avec,virgule" --csv "$csv_file" \
+expect_exit 1 'label avec virgule : option comprise, mais CSV ambigu' \
+    "$program" --label "Avec,virgule" --csv "$csv_file" \
     --file tests/data/sensors-history.json
 
 if test -e /dev/full; then
-    expect_exit 1 "$program" --label "Echec CSV" --csv /dev/full \
+    expect_exit 1 'ecriture CSV impossible dans /dev/full' \
+        "$program" --label "Echec CSV" --csv /dev/full \
         --file tests/data/sensors-history.json
 fi
