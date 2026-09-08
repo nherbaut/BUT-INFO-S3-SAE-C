@@ -1,4 +1,4 @@
-#include <projet/statistics.h>
+#include "projet/statistics.h"
 
 /**
  * Calcule les statistiques d'une seule temperature dans une serie deja

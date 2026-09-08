@@ -377,6 +377,17 @@ son premier caractère. La chaîne se termine par le caractère spécial `\0`.
 | `%f` | `double` ou `float` converti en `double` lors de l'appel | `printf("%.2f", moyenne);` |
 | `%%` | aucun argument : affiche le caractère `%` | `printf("100%%");` |
 
+`size_t` est le type utilisé pour les tailles et les indices : c'est par
+exemple le type renvoyé par `sizeof` et `strlen`. Sa taille exacte dépend de la
+machine ; il ne faut donc pas l'afficher avec `%d` ni avec `%lu`. Pour l'écrire
+avec `printf`, `fprintf` ou `snprintf`, on utilise `%zu` :
+
+```c
+size_t nombre_mesures = 17;
+
+printf("Nombre de mesures : %zu\n", nombre_mesures);
+```
+
 Le code de format doit correspondre au type de l'argument. Une incohérence peut
 produire un warning ou un comportement indéfini : les warnings de compilation
 doivent donc être lus et corrigés.
@@ -424,6 +435,19 @@ int annee;
 
 scanf("%d", &annee);
 ```
+
+De la même façon, pour lire un `size_t`, utilisez `%zu` et passez son adresse :
+
+```c
+size_t capacite;
+
+if (scanf("%zu", &capacite) == 1) {
+    /* capacite a ete lue correctement */
+}
+```
+
+Avec `scanf`, il faut toujours vérifier la valeur de retour : elle indique le
+nombre de valeurs effectivement lues et converties.
 
 L'opérateur `&`, dit *address-of*, produit l'adresse de la variable `annee`.
 Cette adresse permet à `scanf` de modifier la variable située à cet emplacement

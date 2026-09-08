@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <math.h>
 
-#include <projet/statistics.h>
+#include "projet/statistics.h"
 
 int main(void)
 {

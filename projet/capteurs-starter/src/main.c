@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <projet/report.h>
-#include <projet/sensor_source.h>
+#include "projet/report.h"
+#include "projet/sensor_source.h"
 
 #define SENSORS_URL "https://tribequa.org/assets/data/sensors-history.json"
 #define DEFAULT_CSV_PATH "rapport.csv"

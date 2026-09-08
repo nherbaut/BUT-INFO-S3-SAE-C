@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include <projet/series.h>
+#include "projet/series.h"
 
 int main(void)
 {

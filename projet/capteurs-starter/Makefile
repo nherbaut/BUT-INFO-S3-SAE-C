@@ -22,6 +22,7 @@ TEST_STATISTICS := $(BUILD_DIR)/test_statistics
 TEST_SERIES := $(BUILD_DIR)/test_series
 TEST_SOURCE := $(BUILD_DIR)/test_source
 TEST_REPORT := $(BUILD_DIR)/test_report
+TEST_CSV := $(BUILD_DIR)/test_csv
 LIB_OBJS := \
 	$(BUILD_DIR)/series.o \
 	$(BUILD_DIR)/statistics.o \
@@ -29,7 +30,7 @@ LIB_OBJS := \
 	$(BUILD_DIR)/report.o \
 	$(BUILD_DIR)/cJSON.o
 
-.PHONY: all run test test-statistics test-series test-source test-report test-cli memcheck memcheck-tests memcheck-series memcheck-cli memcheck-run memcheck-scenario check-tools cppcheck pdf clean
+.PHONY: all run test test-statistics test-series test-source test-report test-csv test-cli memcheck memcheck-tests memcheck-series memcheck-cli memcheck-run memcheck-scenario check-tools cppcheck pdf clean
 
 all: $(PROGRAM)
 
@@ -66,6 +67,9 @@ $(BUILD_DIR)/test_source.o: tests/test_source.c include/projet/sensor_source.h |
 $(BUILD_DIR)/test_report.o: tests/test_report.c include/projet/report.h include/projet/statistics.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/test_csv.o: tests/test_csv.c include/projet/report.h include/projet/statistics.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 $(PROGRAM): $(BUILD_DIR)/main.o $(LIB_OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
@@ -82,10 +86,13 @@ $(TEST_SOURCE): $(BUILD_DIR)/test_source.o $(BUILD_DIR)/series.o $(BUILD_DIR)/se
 $(TEST_REPORT): $(BUILD_DIR)/test_report.o $(BUILD_DIR)/report.o $(BUILD_DIR)/statistics.o
 	$(CC) $(LDFLAGS) $^ -lm -o $@
 
+$(TEST_CSV): $(BUILD_DIR)/test_csv.o $(BUILD_DIR)/report.o $(BUILD_DIR)/statistics.o
+	$(CC) $(LDFLAGS) $^ -lm -o $@
+
 run: $(PROGRAM)
 	./$(PROGRAM)
 
-test: test-statistics test-series test-source test-report test-cli
+test: test-statistics test-series test-source test-report test-csv test-cli
 
 test-statistics: $(TEST_STATISTICS)
 	./$(TEST_STATISTICS)
@@ -99,7 +106,10 @@ test-source: $(TEST_SOURCE)
 test-report: $(TEST_REPORT)
 	./$(TEST_REPORT)
 
-test-cli: $(PROGRAM)
+test-csv: test-report $(TEST_CSV)
+	./$(TEST_CSV)
+
+test-cli: test-csv $(PROGRAM)
 	sh tests/test_cli.sh ./$(PROGRAM)
 
 memcheck: memcheck-tests memcheck-cli
@@ -107,11 +117,12 @@ memcheck: memcheck-tests memcheck-cli
 memcheck-series: $(TEST_SERIES)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SERIES)
 
-memcheck-tests: $(TEST_STATISTICS) $(TEST_SERIES) $(TEST_SOURCE) $(TEST_REPORT)
+memcheck-tests: $(TEST_STATISTICS) $(TEST_SERIES) $(TEST_SOURCE) $(TEST_REPORT) $(TEST_CSV)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_STATISTICS)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SERIES)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_SOURCE)
 	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_REPORT)
+	$(VALGRIND) $(VALGRIND_FLAGS) ./$(TEST_CSV)
 
 memcheck-cli: $(PROGRAM)
 	@csv_file=$$(mktemp); trap 'rm -f "$$csv_file"' EXIT HUP INT TERM; \

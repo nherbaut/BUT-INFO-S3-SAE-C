@@ -78,7 +78,8 @@ Lisez les headers avant de modifier les sources. Utilisez uniquement
 | `make` | Compile `build/capteurs`. |
 | `make test-statistics` | Exécute les tests des statistiques. |
 | `make test-series` | Exécute les tests du tableau dynamique. |
-| `make test-report` | Exécute les tests du rapport et du CSV. |
+| `make test-report` | Exécute les tests du libellé et du rapport terminal. |
+| `make test-csv` | Exécute les tests unitaires de l'export CSV. |
 | `make test-cli` | Vérifie un lancement complet avec fichier CSV. |
 | `make test` | Exécute tous les tests. |
 | `make memcheck` | Exécute les tests avec Valgrind. |
@@ -136,7 +137,7 @@ Dans `src/series.c` :
 
 Validez cette étape avec `make test-series` puis `make memcheck-series`.
 
-### Étape 3B — Libellé, rapport terminal et export CSV
+### Étape 3B — Libellé et rapport terminal
 
 Dans `src/report.c`, `sensor_report_options_init` doit refuser un libellé nul,
 vide, ou contenant une virgule, un guillemet ou un retour à la ligne. Copiez un
@@ -192,6 +193,9 @@ des virgules, sont dans cet ordre :
 Les valeurs statistiques sont écrites avec deux décimales. La fonction retourne
 `0` si les arguments sont invalides, si la série est vide, si un calcul échoue
 ou si une écriture échoue.
+
+Validez d'abord l'export CSV avec `make test-csv`, puis l'intégration complète
+avec `make test-cli`.
 
 Validez la version finale avec :
 

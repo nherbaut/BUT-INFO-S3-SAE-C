@@ -1,4 +1,4 @@
-#include <projet/series.h>
+#include "projet/series.h"
 
 void measure_series_init(MeasureSeries *series)
 {
