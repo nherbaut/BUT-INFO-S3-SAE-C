@@ -1835,7 +1835,7 @@ def admin_page(flow_items, question_bank):
         setStatus("warning", "Le quiz selectionne ne contient aucune question.");
         return;
       }}
-      startLiveQuiz(quiz, null, "correction");
+      startLiveQuiz(quiz);
       return;
     }}
     publish(action("navigate", {{ url: url.href }}));
