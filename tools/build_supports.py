@@ -1358,11 +1358,11 @@ def live_quiz_page():
       window.location.assign(siteHref("live-code.html"));
       return;
     }}
-    if (action?.type === "live_quiz" && action.question && action.responseTopic) {{
+    if (action?.type === "live_quiz" && (action.question || action.questions) && action.responseTopic) {{
       storeJson(liveQuizKey, {{
         id: action.id || `live-quiz-${{Date.now()}}`,
         title: action.title || "Question live",
-        question: action.question,
+        questions: action.questions || [action.question],
         responseTopic: action.responseTopic,
         username: usernameBadge.textContent || "anonyme",
         receivedAt: new Date().toISOString(),
@@ -1391,22 +1391,24 @@ def live_quiz_page():
   }}
 
   function render(payload) {{
-    const question = payload.question;
+    const questions = payload.questions || (payload.question ? [payload.question] : []);
     title.textContent = payload.title || "Quiz live";
     usernameBadge.textContent = payload.username || "anonyme";
     target.innerHTML = `
-      <div class="card-header fw-semibold">${{escape(question.title || "Question")}}</div>
+      <div class="card-header fw-semibold">${{escape(payload.title || "Quiz live")}}</div>
       <div class="card-body">
-        ${{question.description ? `<p class="text-body-secondary">${{escape(question.description)}}</p>` : ""}}
-        <fieldset>
-          <legend class="visually-hidden">${{escape(question.title || "Question")}}</legend>
-          ${{(question.options || []).map((option) => `
-            <label class="form-check live-quiz-option">
-              <input class="form-check-input" type="checkbox" value="${{escape(option.id)}}">
-              <span class="form-check-label">${{escape(option.text)}}</span>
-            </label>
-          `).join("")}}
-        </fieldset>
+        ${{questions.map((question, index) => `
+          <fieldset data-live-question-id="${{escape(question.id)}}" class="mb-4">
+            <legend class="h5">${{index + 1}}. ${{escape(question.title || "Question")}}</legend>
+            ${{question.description ? `<p class="text-body-secondary">${{escape(question.description)}}</p>` : ""}}
+            ${{(question.options || []).map((option) => `
+              <label class="form-check live-quiz-option">
+                <input class="form-check-input" type="checkbox" value="${{escape(option.id)}}">
+                <span class="form-check-label">${{escape(option.text)}}</span>
+              </label>
+            `).join("")}}
+          </fieldset>
+        `).join("")}}
         <button class="btn btn-primary mt-3" type="button" data-submit-live-quiz>Envoyer la reponse</button>
         <div class="mt-3" data-live-quiz-feedback></div>
       </div>
@@ -1415,14 +1417,17 @@ def live_quiz_page():
   }}
 
   async function submit(payload) {{
-    const selected = Array.from(target.querySelectorAll("input:checked"), (input) => input.value);
+    const answers = Array.from(target.querySelectorAll("[data-live-question-id]"), (fieldset) => ({{
+      questionId: fieldset.dataset.liveQuestionId,
+      selected: Array.from(fieldset.querySelectorAll("input:checked"), (input) => input.value),
+    }}));
     const feedback = target.querySelector("[data-live-quiz-feedback]");
     const response = {{
       saec: 1,
       type: "quiz_response",
       quizId: payload.id,
       username: payload.username || "anonyme",
-      selected,
+      answers,
       answeredAt: new Date().toISOString(),
     }};
     try {{
@@ -1439,7 +1444,7 @@ def live_quiz_page():
   }}
 
   const payload = readPayload();
-  if (!payload || !payload.question || !payload.responseTopic) {{
+  if (!payload || !(payload.question || payload.questions?.length) || !payload.responseTopic) {{
     target.innerHTML = '<div class="card-body"><div class="alert alert-warning mb-0">Aucune question live recue pour le moment.</div></div>';
     connectGroupTopic();
     return;
@@ -1799,6 +1804,67 @@ def admin_page(flow_items, question_bank):
     }}
   }}
 
+  function isLocalPreviewUrl(url) {{
+    const siteRoot = new URL(".", window.location.href);
+    return url.origin === window.location.origin && url.pathname.startsWith(siteRoot.pathname);
+  }}
+
+  function quizAtPreviewUrl(url) {{
+    try {{
+      const previewWindow = previewFrame.contentWindow;
+      const previewDocument = previewFrame.contentDocument;
+      const currentUrl = new URL(previewWindow.location.href);
+      if (!previewDocument || !url.hash || url.origin !== currentUrl.origin ||
+          url.pathname !== currentUrl.pathname || url.search !== currentUrl.search) {{
+        return null;
+      }}
+      const target = previewDocument.getElementById(decodeURIComponent(url.hash.slice(1)));
+      const player = target?.matches("quiz-player") ? target : target?.closest("quiz-player");
+      if (!player?.dataset.quizB64) return null;
+
+      const bytes = Uint8Array.from(atob(player.dataset.quizB64), (char) => char.charCodeAt(0));
+      return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+    }} catch (_error) {{
+      return null;
+    }}
+  }}
+
+  function sendPreviewLink(url, quiz) {{
+    if (quiz) {{
+      if (!Array.isArray(quiz.questions) || quiz.questions.length === 0) {{
+        setStatus("warning", "Le quiz selectionne ne contient aucune question.");
+        return;
+      }}
+      startLiveQuiz(quiz, null, "correction");
+      return;
+    }}
+    publish(action("navigate", {{ url: url.href }}));
+  }}
+
+  function bindPreviewLinks() {{
+    try {{
+      const previewDocument = previewFrame.contentDocument;
+      if (!previewDocument || previewDocument.documentElement.dataset.adminLinksBound === "true") return;
+      previewDocument.documentElement.dataset.adminLinksBound = "true";
+      previewDocument.addEventListener("click", (event) => {{
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const link = event.target.closest("a[href]");
+        if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+        const url = new URL(link.href, previewFrame.contentWindow.location.href);
+        if (!isLocalPreviewUrl(url)) return;
+
+        const quiz = quizAtPreviewUrl(url);
+        if (quiz) {{
+          event.preventDefault();
+          previewFrame.src = url.href;
+        }}
+        sendPreviewLink(url, quiz);
+      }});
+    }} catch (_error) {{
+      // A preview outside the site cannot be inspected or synchronized.
+    }}
+  }}
+
   function updateFullscreenButton() {{
     const button = document.querySelector("[data-preview-fullscreen]");
     const active = document.fullscreenElement === previewContainer;
@@ -1925,8 +1991,25 @@ def admin_page(flow_items, question_bank):
     return question;
   }}
 
-  function startLiveQuiz(question, flowIndex = null) {{
-    const fullQuestion = normalizeQuestion(JSON.parse(JSON.stringify(question)));
+  function normalizeQuiz(quizOrQuestion) {{
+    const candidate = JSON.parse(JSON.stringify(quizOrQuestion));
+    const questions = Array.isArray(candidate.questions) ? candidate.questions : [candidate];
+    if (questions.length === 0) {{
+      throw new Error("Le quiz doit contenir au moins une question.");
+    }}
+    return {{
+      title: candidate.title || questions[0].title || "Question live",
+      questions: questions.map(normalizeQuestion),
+    }};
+  }}
+
+  function activeQuestions() {{
+    if (!activeQuiz) return [];
+    return Array.isArray(activeQuiz.questions) ? activeQuiz.questions : [activeQuiz.question];
+  }}
+
+  function startLiveQuiz(quizOrQuestion, flowIndex = null, resultsMode = "responses") {{
+    const fullQuiz = normalizeQuiz(quizOrQuestion);
     const quizId = `live-${{groupSelect.value}}-${{Date.now()}}`;
     if (flowIndex !== null) {{
       activeFlowIndex = flowIndex;
@@ -1936,8 +2019,8 @@ def admin_page(flow_items, question_bank):
     activeQuiz = {{
       id: quizId,
       group: groupSelect.value,
-      title: fullQuestion.title || "Question live",
-      question: fullQuestion,
+      title: fullQuiz.title,
+      questions: fullQuiz.questions,
       startedAt: new Date().toISOString(),
     }};
     localStorage.setItem("sae-c.admin.activeQuiz.v1", JSON.stringify(activeQuiz));
@@ -1945,11 +2028,11 @@ def admin_page(flow_items, question_bank):
     publish(action("live_quiz", {{
       id: quizId,
       title: activeQuiz.title,
-      question: studentQuestion(fullQuestion),
+      questions: activeQuiz.questions.map(studentQuestion),
       responseTopic: currentAdminTopic(),
     }}));
     renderStats();
-    openResultsModal("responses");
+    openResultsModal(resultsMode);
   }}
 
   function readStats() {{
@@ -2011,12 +2094,17 @@ def admin_page(flow_items, question_bank):
     if (session.answers.some((answer) => answer.username === response.username)) {{
       return;
     }}
-    const expected = activeQuiz.question.options.filter((option) => option.correct).map((option) => option.id);
-    const selected = Array.isArray(response.selected) ? response.selected : [];
-    const correct = sameSet(selected, expected);
+    const answers = Array.isArray(response.answers)
+      ? response.answers
+      : [{{ questionId: activeQuestions()[0]?.id, selected: response.selected }}];
+    const correct = activeQuestions().every((question) => {{
+      const answer = answers.find((entry) => entry.questionId === question.id);
+      const expected = question.options.filter((option) => option.correct).map((option) => option.id);
+      return sameSet(Array.isArray(answer?.selected) ? answer.selected : [], expected);
+    }});
     session.answers.push({{
       username: response.username || "anonyme",
-      selected,
+      answers,
       correct,
       answeredAt: response.answeredAt || new Date().toISOString(),
     }});
@@ -2060,9 +2148,11 @@ def admin_page(flow_items, question_bank):
     return stats.sessions[activeQuiz.id] || null;
   }}
 
-  function correctOptionLabels() {{
-    if (!activeQuiz) return [];
-    return activeQuiz.question.options.filter((option) => option.correct).map((option) => option.text);
+  function correctOptionsByQuestion() {{
+    return activeQuestions().map((question) => ({{
+      title: question.title,
+      labels: question.options.filter((option) => option.correct).map((option) => option.text),
+    }}));
   }}
 
   function leaderboardHtml() {{
@@ -2094,7 +2184,10 @@ def admin_page(flow_items, question_bank):
     const podium = correctAnswers.slice(0, 3).map((answer, index) => `<li>${{index + 1}}. ${{escape(answer.username)}} <span class="text-body-secondary">${{escape(answer.answeredAt)}}</span></li>`).join("");
     resultsBody.innerHTML = `
       <h3 class="h5">Bonne reponse</h3>
-      <ul>${{correctOptionLabels().map((label) => `<li>${{escape(label)}}</li>`).join("")}}</ul>
+      ${{correctOptionsByQuestion().map((question) => `
+        <p class="mb-1 fw-semibold">${{escape(question.title)}}</p>
+        <ul>${{question.labels.map((label) => `<li>${{escape(label)}}</li>`).join("")}}</ul>
+      `).join("")}}
       <p>${{correctAnswers.length}} bonne(s) reponse(s) sur ${{session.answers.length}} reponse(s).</p>
       <h3 class="h5">Podium</h3>
       <ol>${{podium || "<li>Aucune bonne reponse.</li>"}}</ol>
@@ -2185,7 +2278,10 @@ def admin_page(flow_items, question_bank):
   document.querySelector("[data-flow-current]").addEventListener("click", sendCurrentFlowItem);
   document.querySelector("[data-flow-next]").addEventListener("click", sendNextFlowItem);
   document.querySelector("[data-preview-fullscreen]").addEventListener("click", togglePreviewFullscreen);
-  previewFrame.addEventListener("load", revealPreviewPlayer);
+  previewFrame.addEventListener("load", () => {{
+    revealPreviewPlayer();
+    bindPreviewLinks();
+  }});
   document.addEventListener("fullscreenchange", updateFullscreenButton);
 
   document.querySelectorAll("[data-flow-index]").forEach((button) => {{

@@ -272,7 +272,7 @@
     storeJson(liveQuizKey, {
       id: action.id || `live-quiz-${Date.now()}`,
       title: action.title || t("liveQuestion"),
-      question: action.question,
+      questions: action.questions || (action.question ? [action.question] : []),
       responseTopic: action.responseTopic,
       username: storedUsername(),
       receivedAt: new Date().toISOString(),
@@ -301,7 +301,7 @@
       openLiveCode(action.source || "", action.title);
       return true;
     }
-    if (action.type === "live_quiz" && action.question && action.responseTopic) {
+    if (action.type === "live_quiz" && (action.question || action.questions) && action.responseTopic) {
       openLiveQuiz(action);
       return true;
     }
