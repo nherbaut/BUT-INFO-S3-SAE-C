@@ -12,6 +12,8 @@ Réalisez le projet capteurs en binôme dans un **fork privé** du projet.
   `2026-2026-SAE-C-Projet-NOM1-NOM2`.
 - Remplacez `NOM1` et `NOM2` par les noms des deux membres du binôme.
 - Conservez un historique de commits qui permet de suivre votre progression.
+- Commitez et poussez régulièrement : le dépôt distant doit refléter votre
+  avancement, pas seulement la version finale.
 
 Les 20 % de cette partie évaluent le projet initial : son fonctionnement, le
 respect du sujet et la qualité du dépôt rendu.
@@ -27,8 +29,9 @@ L'enseignant doit y avoir été invité avec le rôle de **mainteneur**. Créez 
 branche `ds` dans ce fork avant de commencer l'épreuve. À la fin du DS,
 commitez votre travail puis poussez cette branche dans le fork.
 
-Avant le DS, la branche rendue doit compiler et passer `make test` ainsi que
-`make memcheck`. Cette vérification de conformité garantit une base commune
+Avant le DS, sur le créneau indiqué par les enseignants, la branche rendue doit
+compiler et passer `make test` ainsi que `make memcheck`, puis être poussée dans
+le fork privé. Cette vérification de conformité garantit une base commune
 fonctionnelle pour l'épreuve individuelle.
 
 Vous devrez donc être capable de lire votre code, d'en expliquer les choix et

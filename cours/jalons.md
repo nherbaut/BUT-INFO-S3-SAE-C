@@ -1,11 +1,13 @@
 # Jalons autonomes
 
 Les jalons structurent le travail personnel à réaliser entre les phases encadrées.
+Le projet capteurs est réalisé en binôme dans un fork privé ; les modalités de
+constitution du binôme et de rendu sont précisées dans la page d'évaluation.
 
 Les modalités de rendu et la répartition de la note sont décrites dans la page
 [Évaluation de la SAE C](evaluation.html).
 
-## Jalon autonome 1 - Prise en main (phases 1 et 2)
+## Jalon autonome 1 - Prise en main (phases 1 et 2) {#jalon-1}
 
 Sans modifier le projet, ouvrez-le dans VS Code et vérifiez l'environnement
 avec `make check-tools`, `make`, `make test` et `make cppcheck`.
@@ -13,6 +15,10 @@ avec `make check-tools`, `make`, `make test` et `make cppcheck`.
 Lisez ensuite le `SUJET.md` du projet capteurs et repérez le rôle de `src/`,
 `include/`, `tests/`, `provided/` et du Makefile. Distinguez le code à
 compléter du code fourni.
+
+Tracez aussi l'arbre des dépendances du projet : faites apparaître `src/`,
+`include/`, `tests/`, `provided/`, le `Makefile`, ainsi que les liens entre un
+source, son header, son fichier objet et l'exécutable ou le test correspondant.
 
 Le [sujet du projet capteurs est également disponible au format PDF](assets/pdf/projet-capteurs.pdf).
 
@@ -159,7 +165,7 @@ Lancez le programme avec le débogueur et parcourez son exécution. Survolez les
 variables pour afficher leur valeur courante.
 ```
 
-## Jalon autonome 2 - Fonctions, pointeurs et structures (phase 3)
+## Jalon autonome 2 - Fonctions, pointeurs et structures (phase 3) {#jalon-2}
 
 Implémentez `temperature_statistics_compute` et
 `temperature_average_gap`. Le test `tests/test_statistics.c` construit déjà un
@@ -173,7 +179,7 @@ make test-statistics
 make cppcheck
 ```
 
-## Jalon autonome 3 - Mémoire dynamique, chaînes et fichiers (phase 4)
+## Jalon autonome 3 - Mémoire dynamique, chaînes et fichiers (phase 4) {#jalon-3}
 
 Réalisez les trois étapes suivantes dans l'ordre :
 
@@ -181,18 +187,19 @@ Réalisez les trois étapes suivantes dans l'ordre :
    `measure_series_append` et `measure_series_clear`. Le test de série ajoute
    17 mesures afin de forcer l'agrandissement du tableau. Validez avec
    `make test-series` et `make memcheck-series`.
-2. **3B — libellé, rapport terminal et export CSV** : gérez le libellé
-   dynamique, puis produisez le rapport terminal au format demandé et l'export
-   CSV de synthèse. Validez avec
+2. **3B — libellé et rapport terminal** : gérez le libellé dynamique, puis
+   produisez le rapport terminal au format demandé. Validez avec
    `make test-report`.
-3. **3C — CLI et intégration** : complétez l'analyse des options et validez le
-   programme complet sur le fichier local avec `--csv` et `--label`.
+3. **3C — CSV, CLI et intégration** : produisez le CSV de synthèse, complétez
+   l'analyse des options et validez avec `make test-csv`, puis le programme
+   complet sur le fichier local avec `--csv` et `--label`.
 
 ```bash
 cd projet/capteurs-starter
 make test-series
 make memcheck-series
 make test-report
+make test-csv
 make test
 make cppcheck
 make memcheck

@@ -94,10 +94,13 @@ Lisez les headers avant de modifier les sources. Utilisez uniquement
 3. Lisez `include/projet/`, `src/` et `tests/`.
 4. Repérez le rôle de `src/`, `include/`, `tests/`, `provided/` et du
    Makefile.
-5. Créez un premier commit.
+5. Tracez l'arbre des dépendances entre les sources, leurs headers, les fichiers
+   objets, les tests et l'exécutable.
+6. Créez un premier commit.
 
 **Attendu :** vous savez compiler le projet, lancer les vérifications et
-distinguer le code à compléter du code fourni.
+distinguer le code à compléter du code fourni. Vous savez aussi expliquer le
+chemin allant d'un fichier source à l'exécutable ou au test qui l'utilise.
 
 ## Jalon 2 — Fonctions, pointeurs et structures (phase 3)
 

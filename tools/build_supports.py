@@ -248,15 +248,26 @@ def milestone_infos():
             continue
         if in_code_fence:
             continue
-        match = re.match(r"^##\s+(.+)$", line)
+        match = re.match(r"^##\s+(.+?)(?:\s+\{#(?P<id>[A-Za-z][A-Za-z0-9_-]*)\})?\s*$", line)
         if not match:
             continue
         title = match.group(1)
         normalized = unicodedata.normalize("NFKD", title)
         normalized = "".join(char for char in normalized if not unicodedata.combining(char))
-        milestone_id = re.sub(r"[^a-z0-9]", "-", normalized.lower()).strip("-")
+        milestone_id = match.group("id") or re.sub(r"[^a-z0-9]", "-", normalized.lower()).strip("-")
         milestones.append({"title": title, "id": milestone_id})
     return milestones
+
+
+def validate_milestone_anchors(page_path):
+    page = read_text(page_path)
+    for milestone in milestone_infos():
+        heading = rf'<h2 id="{re.escape(milestone["id"])}"'
+        if not re.search(heading, page):
+            raise RuntimeError(
+                f"Ancre de jalon introuvable dans {page_path.name}: "
+                f"#{milestone['id']}"
+            )
 
 
 def load_exercise(path_text):
@@ -2341,6 +2352,7 @@ def main():
     milestones_source = read_text(MILESTONES_PATH)
     run_pandoc(expand_markdown(milestones_source, html_mode=True), BUILD / MILESTONES_PAGE, True, "Jalons autonomes")
     postprocess_doc_page(BUILD / MILESTONES_PAGE, courses, MILESTONES_PAGE, "course")
+    validate_milestone_anchors(BUILD / MILESTONES_PAGE)
 
     evaluation_source = read_text(EVALUATION_PATH)
     run_pandoc(expand_markdown(evaluation_source, html_mode=True), BUILD / EVALUATION_PAGE, True, "Évaluation de la SAE C")

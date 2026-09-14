@@ -63,7 +63,10 @@ def main():
         shutil.copytree(
             SOLUTION_PROJECT,
             archive_root,
-            ignore=shutil.ignore_patterns("build", "dist", "__pycache__"),
+            ignore=shutil.ignore_patterns(
+                ".git", ".vscode", "build", "dist", "__pycache__", "*.swp",
+                "rapport.csv",
+            ),
         )
         teacher_readme = archive_root / "README.md"
         if teacher_readme.exists():

@@ -12,10 +12,10 @@
 
 ### Allocation automatique : la pile
 
-Les variables locales d'une fonction sont allouées automatiquement sur la pile
-d'appels. L'espace est réservé lors de l'appel de la fonction et restitué quand
-la fonction se termine. Une adresse vers une variable locale ne doit donc pas
-être utilisée après le retour de la fonction.
+Les variables locales à durée de vie automatique existent à partir de l'entrée
+dans leur bloc et cessent d'exister à la sortie de ce bloc. Sur les
+implémentations courantes, elles sont placées dans une pile d'appels. Une adresse
+vers une variable locale ne doit donc pas être utilisée après la sortie du bloc.
 
 ```c
 void afficher_carre(int valeur)
@@ -220,8 +220,10 @@ modifiable[0] = 'A';
 ```
 
 Un littéral peut être partagé et ne doit pas être modifié. Le déclarer `const`
-rend cette règle visible. La seconde forme réserve un tableau de quatre octets,
-dont un pour `\0`, et son contenu peut être changé.
+rend cette règle visible. Comme toute chaîne C, le littéral `"abc"` contient
+aussi son `\0` final : il occupe donc quatre octets. La seconde forme réserve
+également un tableau de quatre octets, dont un pour `\0`, et son contenu peut
+être changé.
 
 ### Copier et comparer des chaînes
 
@@ -379,6 +381,13 @@ Les modes les plus courants sont `r` pour lire un fichier existant, `w` pour
 écrire en créant ou écrasant le fichier, et `a` pour ajouter à la fin. Un fichier
 ouvert doit être fermé avec `fclose`, surtout après une écriture.
 
+```remember
+Toute ressource obtenue avec succès doit être libérée une seule fois par son
+propriétaire : une zone allouée avec `malloc` ou `realloc` est libérée avec
+`free`, et un fichier ouvert avec `fopen` est fermé avec `fclose`. Prévoyez ces
+libérations aussi dans les chemins d'erreur.
+```
+
 Les fonctions `fprintf` et `fscanf` sont les équivalents formatés de `printf`
 et `scanf` sur un fichier. `fgets` et `fputs` lisent ou écrivent des chaînes ;
 `fgetc` et `fputc` traitent un caractère. `getline` peut agrandir la mémoire
@@ -391,8 +400,6 @@ Dans l'exercice suivant, `TEXTE_MAX` et `LIGNE_MAX` remplacent ainsi des tailles
 « magiques » par des noms qui documentent leur rôle.
 ```
 
-{{ c_exercise: exercices/seance-04/annuaire-csv }}
-
 ## Exercices proposés
 
 - Écrire `afficher_annuaire(const struct Annuaire *annuaire)`.
@@ -403,3 +410,8 @@ Dans l'exercice suivant, `TEXTE_MAX` et `LIGNE_MAX` remplacent ainsi des tailles
   `fclose`.
 - Diagnostiquer une fuite, une double libération et un accès après libération
   avec Valgrind.
+
+Une fois les opérations de base sur l'annuaire maîtrisées, réalisez l'exercice
+complet de sauvegarde et relecture CSV :
+
+{{ c_exercise: exercices/seance-04/annuaire-csv }}

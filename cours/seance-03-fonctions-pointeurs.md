@@ -75,6 +75,18 @@ Comparer `adresse_reponse < 0` comparerait une adresse, pas la valeur lue.
 Dans `int *p, q;`, seul `p` est un pointeur ; `q` est un entier. Préférez une
 déclaration par ligne.
 
+```remember
+En C, tous les arguments sont passés par copie. Pour modifier une donnée de
+l'appelant, on transmet donc une copie de son adresse, puis on déréférence cette
+adresse. C'est aussi ce qui se passe avec `scanf("%d", &valeur)`.
+```
+
+```technical
+En Java, une variable de référence donne accès à un objet géré par le ramasse-
+miettes. En C, un pointeur est une valeur explicite : le programme doit
+contrôler sa validité, et le propriétaire d'une zone allouée doit la libérer.
+```
+
 ::: quiz {#quiz-s3-declaration-pointeur}
 title: Lire une déclaration de pointeur
 
@@ -125,6 +137,8 @@ void ajouter_une_minute(struct Duree *duree)
 
 Les initialiseurs désignés rendent le code lisible. On utilise `.` avec une
 structure et `->` avec un pointeur vers une structure.
+
+{{ c_exercise: exercices/seance-03/etudiants }}
 
 ## Énumérations
 

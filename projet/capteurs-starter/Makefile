@@ -105,9 +105,11 @@ test-source: $(TEST_SOURCE)
 
 test-report: $(TEST_REPORT)
 	./$(TEST_REPORT)
+	@echo "test-report: succes."
 
 test-csv: test-report $(TEST_CSV)
 	./$(TEST_CSV)
+	@echo "test-csv: succes."
 
 test-cli: test-csv $(PROGRAM)
 	sh tests/test_cli.sh ./$(PROGRAM)

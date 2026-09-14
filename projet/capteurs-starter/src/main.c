@@ -38,8 +38,8 @@ static int parse_options(int argc, char *argv[], ProgramOptions *options)
 
     /* TODO S2/S4 : parcourir argv avec une boucle. Accepter --url URL ou
      * --file FICHIER (au plus un), ainsi que --csv FICHIER et --label TEXTE,
-     * dans n'importe quel ordre. Les deux derniers remplacent respectivement
-     * DEFAULT_CSV_PATH et DEFAULT_REPORT_LABEL. Utiliser strcmp et refuser les
+     * dans n'importe quel ordre. Les deux derniers remplacent les valeurs par
+     * defaut du fichier CSV et du libelle. Utiliser strcmp et refuser les
      * options inconnues, dupliquees ou incompletes. Sans source, l'URL par
      * defaut est utilisee. */
     return 1;

@@ -380,7 +380,11 @@ séparée. Travaillez localement et vérifiez après chaque étape avec `make te
    `src/stats.c`, avec `-c`. La cible `build/stats` doit ensuite lier ces deux
    fichiers objets. Ajoutez aussi `include/projet/stats.h` aux dépendances des
    deux fichiers objets.
-5. **Valider le résultat.** `make`, `make run`, `make test` et `make memcheck`
+5. **Tracer les dépendances.** Dessinez l'arbre qui relie `src/main.c`,
+   `src/stats.c`, `include/projet/stats.h`, les deux fichiers `.o` et
+   `build/stats`. Indiquez quelles modifications d'un fichier imposent une
+   recompilation.
+6. **Valider le résultat.** `make`, `make run`, `make test` et `make memcheck`
    doivent toujours fonctionner. `make clean` doit supprimer `build/`.
 
 

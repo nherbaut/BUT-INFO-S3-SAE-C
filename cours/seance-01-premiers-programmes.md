@@ -454,6 +454,11 @@ Cette adresse permet à `scanf` de modifier la variable située à cet emplaceme
 en mémoire. À ce stade, il suffit de retenir que `scanf` a besoin de savoir où
 écrire la valeur lue.
 
+Même lorsque l'on transmet une adresse, l'argument est passé par copie :
+`scanf` reçoit une copie de l'adresse de `annee`, qui désigne toujours la même
+variable. La phase 3 développera ce mécanisme avec les pointeurs et le
+déréférencement.
+
 Le principe est le même pour une chaîne de caractères, qui est stockée dans un
 tableau de `char` :
 
