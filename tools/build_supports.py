@@ -1765,9 +1765,11 @@ def admin_page(flow_items, question_bank):
   function renderPreview() {{
     const item = currentFlowItem();
     if (!item) {{
-      previewFrame.removeAttribute("src");
-      previewTitle.textContent = "Parcours du cours";
-      previewSubtitle.textContent = "Selectionner une section ou une question.";
+      previewTitle.textContent = "Accueil";
+      previewSubtitle.textContent = "Page d'accueil du site.";
+      if (!previewFrame.getAttribute("src")) {{
+        previewFrame.src = "index.html";
+      }}
       return;
     }}
     const sectionIndex = item.type === "section" ? activeFlowIndex : nearestSectionIndex(activeFlowIndex);
