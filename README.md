@@ -14,8 +14,8 @@ les phases du cours.
 ## Demarrer
 
 ```bash
-git clone https://github.com/nherbaut/BUT-INFO-S3-SAE-C.git
-cd BUT-INFO-S3-SAE-C
+git clone https://gitlab-ce.iut.u-bordeaux.fr/nherbaut/s3-sae-c-cours-public
+cd s3-sae-c-cours-public
 ```
 
 Chaque exercice et projet possede son propre Makefile. Depuis son dossier :

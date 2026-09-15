@@ -53802,11 +53802,25 @@ int main(${args}) {
       timeout: !halted
     };
   }
+  function rewriteSimpleWhileBlocks(source) {
+    // The bundled backend can lose a printf label inside a while block.
+    // A for loop with empty initializer and increment has the same C behavior.
+    return source.replace(/\bwhile\s*\(([^()]*)\)(?=\s*\{)/g, (_match, condition) => `for (;${condition};)`);
+  }
   window.CCompilerRuntime = {
     ready: true,
     engine: "ts-c-compiler",
     async run({ source, stdin }) {
-      const build = buildBinary(source, stdin);
+      let build = buildBinary(source, stdin);
+      if (Either_exports.isLeft(build) && build.left.includes("asmLabel")) {
+        const rewritten = rewriteSimpleWhileBlocks(source);
+        if (rewritten !== source) {
+          const retry = buildBinary(rewritten, stdin);
+          if (Either_exports.isRight(retry)) {
+            build = retry;
+          }
+        }
+      }
       if (Either_exports.isLeft(build)) {
         return {
           compilerStdout: "",
